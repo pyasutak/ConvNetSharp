@@ -15,8 +15,8 @@ namespace MNIST
     {
 
 
-        private readonly CircularBuffer<double> _testAccWindow = new CircularBuffer<double>(20);
-        private readonly CircularBuffer<double> _trainAccWindow = new CircularBuffer<double>(20);
+        private readonly CircularBuffer<double> _testAccWindow = new CircularBuffer<double>(100);
+        private readonly CircularBuffer<double> _trainAccWindow = new CircularBuffer<double>(100);
         private readonly CircularBuffer<double> _lossWindow = new CircularBuffer<double>(100);
         private SNet<double> _snet;
         private int _stepCount;
@@ -67,7 +67,7 @@ namespace MNIST
             {
                 LearningRate = 0.01,
                 BatchSize = 1,
-                L2Decay = 0.001,
+                L2Decay = 0.005,
                 //Momentum = 0.9
             };
 

@@ -70,7 +70,7 @@ namespace MNIST
                  */
 
                 //50% of the time find a matching entry.
-                var findMatch = this._random.NextDouble() < 0.5;
+                bool findMatch = this._random.NextDouble() < 0.5;
 
                 var entry = this._trainImages[this._start++];
                 MnistEntry entry2;
@@ -104,15 +104,15 @@ namespace MNIST
                 }
 
                 //Store expected output.
-                var compare = 1.0;
+                double compare = 1.0; //Not the same label.
                 if (labels[i * 2] == labels[i * 2 + 1])
-                    compare = 0.5;
-                expected[i] = compare; //tochange.
+                    compare = 0.5; //The same label
+                expected[i] = compare;
 
-                //expected output is dim: [1, 1, 1, batchSize]. Either 1.0, or 0.0
+                //expected output is dim: [1, 1, 1, batchSize]. 
                 //Do a label comparison of chosen input to determine expected output.
 
-                if (this._start == this._trainImages.Count)
+                if (this._start >= this._trainImages.Count - batchSize)
                 {
                     this._start = 0;
                     this._epochCompleted++;
