@@ -4,7 +4,7 @@ using ConvNetSharp.Volume;
 using ConvNetSharp.Volume.Double;
 using ConvNetSharp.SNet;
 
-namespace MNIST
+namespace ATTFace
 {
     internal class DataSet
     {

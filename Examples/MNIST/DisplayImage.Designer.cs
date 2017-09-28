@@ -1,4 +1,4 @@
-﻿namespace MNIST
+﻿namespace ATTFace
 {
     partial class DisplayImage
     {
@@ -84,7 +84,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(349, 191);
+            this.ClientSize = new System.Drawing.Size(893, 525);
             this.Controls.Add(this.resultLabel);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);

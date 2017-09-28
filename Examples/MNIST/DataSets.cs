@@ -2,7 +2,7 @@
 using System.IO;
 using System.Net;
 
-namespace MNIST
+namespace ATTFace
 {
     internal class DataSets
     {
@@ -12,6 +12,15 @@ namespace MNIST
         private const string trainingImageFile = "train-images-idx3-ubyte.gz";
         private const string testingLabelFile = "t10k-labels-idx1-ubyte.gz";
         private const string testingImageFile = "t10k-images-idx3-ubyte.gz";
+
+
+        private const string urlATT = @"http://www.cl.cam.ac.uk/Research/DTG/attarchive:pub/data/att_faces.tar.Z";
+        private const string attFolder = @"..\att\";
+        private const string attDataSet = "att_faces.tar.Z";
+
+
+
+
 
         public DataSet Train { get; set; }
 

@@ -110,9 +110,9 @@ namespace ConvNetSharp.SNet
              */
             int batchSize = this.Shape.GetDimension(3);
 
-            int inputWidth = this.Shape.GetDimension(0);
-            int inputHeight = this.Shape.GetDimension(1);
-            int inputDepth = this.Shape.GetDimension(2);
+            int inputWidth = this.Shape.GetDimension(0); //always 1
+            int inputHeight = this.Shape.GetDimension(1); //always 1
+            int inputDepth = this.Shape.GetDimension(2); //input count = this.InputWidth * this.InputHeight * this.InputDepth;
 
             //Could link to output dimensions... but currently not needed.
 

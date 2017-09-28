@@ -4,7 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
-namespace MNIST
+namespace ATTFace
 {
     public static class MnistReader
     {
@@ -23,6 +23,19 @@ namespace MNIST
 
         private static List<byte[]> LoadImages(string filename, int maxItem = -1)
         {
+
+            /**
+             * Images are in 40 different folders, with 10 images in each folder = 400 pictures.
+             * Their paths are orl_faces\s1\1.pgm, 2.pgm, ... , 10.pgm
+             *                 orl_faces\s2\1.pgm, 2.pgm, ... , 10.pgm
+             *                 ...
+             * This method should 
+             * 
+             */
+
+
+
+
             var result = new List<byte[]>();
 
             if (File.Exists(filename))

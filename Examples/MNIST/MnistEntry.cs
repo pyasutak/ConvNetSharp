@@ -1,4 +1,4 @@
-﻿namespace MNIST
+﻿namespace ATTFace
 {
     public class MnistEntry
     {

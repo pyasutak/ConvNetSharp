@@ -9,7 +9,7 @@ using ConvNetSharp.SNet.Layers;
 using System.Drawing;
 using System.Collections.Generic;
 
-namespace MNIST
+namespace ATTFace
 {
     internal class Program
     {
@@ -66,7 +66,7 @@ namespace MNIST
             this._trainer = new SgdTrainer<double>(this._snet)
             {
                 LearningRate = 0.01,
-                BatchSize = 1,
+                BatchSize = 20,
                 L2Decay = 0.001,
                 //Momentum = 0.9
             };
@@ -115,9 +115,9 @@ namespace MNIST
                 //                          Are the labels the same?            Does Prediction match result?
             }
 
-            bool displayImages = false;
+            bool displayImages = true;
             if (!displayImages) return;
-            if (this._stepCount < 2000) return;
+            //if (this._stepCount < 2000) return;
 
             SNet<double>.SplitVolumes(x, out ConvNetSharp.Volume.Volume<double> v1, out ConvNetSharp.Volume.Volume<double> v2);
 
