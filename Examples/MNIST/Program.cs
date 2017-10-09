@@ -15,8 +15,8 @@ namespace ATTFace
     {
 
 
-        private readonly CircularBuffer<double> _testAccWindow = new CircularBuffer<double>(20);
-        private readonly CircularBuffer<double> _trainAccWindow = new CircularBuffer<double>(20);
+        private readonly CircularBuffer<double> _validAccWindow = new CircularBuffer<double>(100);
+        private readonly CircularBuffer<double> _trainAccWindow = new CircularBuffer<double>(100);
         private readonly CircularBuffer<double> _lossWindow = new CircularBuffer<double>(100);
         private SNet<double> _snet;
         private int _stepCount;
@@ -50,48 +50,61 @@ namespace ATTFace
 
             // Create network
             this._snet = new SNet<double>();
-            this._snet.AddLayer(new InputLayer(28, 28, 1));
-            this._snet.AddLayer(new ConvLayer(5, 5, 8) { Stride = 1, Pad = 2 });
-            this._snet.AddLayer(new ReluLayer());
-            this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });
-            this._snet.AddLayer(new ConvLayer(5, 5, 16) { Stride = 1, Pad = 2 });
-            this._snet.AddLayer(new ReluLayer());
-            this._snet.AddLayer(new PoolLayer(3, 3) { Stride = 3 });
-            this._snet.AddLayer(new FullyConnLayer(10));
+            this._snet.AddLayer(new InputLayer(92, 112, 1));                        //input shape:
+            this._snet.AddLayer(new ConvLayer(5, 5, 16) { Stride = 1, Pad = 2 });   //92 x 112 x  1 x 20
+            this._snet.AddLayer(new ReluLayer());                                   //92 x 112 x  8 x 20
+            this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //92 x 112 x  8 x 20
+            this._snet.AddLayer(new ConvLayer(5, 5, 32) { Stride = 1, Pad = 2 });   //46 x  56 x  8 x 20
+            this._snet.AddLayer(new ReluLayer());                                   //46 x  56 x 16 x 20
+            this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //46 x  56 x 16 x 20
+            this._snet.AddLayer(new FullyConnLayer(100));                           //23 x  28 x 16 x 20
             //this._snet.AddLayer(new SoftmaxLayer(10));
 
             this._snet.AddDistanceLayer(new TwinJoinLayer()); //Closer to 0 the better.
-            this._snet.AddDistanceLayer(new SigmoidLayer()); //Closer to 0.5 the better. 
+            this._snet.AddDistanceLayer(new SigmoidLayer());  //Closer to 0.5 the better. 
 
             this._trainer = new SgdTrainer<double>(this._snet)
             {
-                LearningRate = 0.01,
+                LearningRate = 0.05,
                 BatchSize = 20,
-                L2Decay = 0.001,
+                L2Decay = 0.001
                 //Momentum = 0.9
             };
 
+            // Do learning
             Console.WriteLine("Convolutional neural network learning...[Press any key to stop]");
             do
             {
                 var trainSample = datasets.Train.NextBatch(this._trainer.BatchSize);
                 Train(trainSample.Item1, trainSample.Item2, trainSample.Item3);
 
-                var testSample = datasets.Test.NextBatch(this._trainer.BatchSize);
-                Test(testSample.Item1, testSample.Item3, this._testAccWindow);
+                //var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
+                //Test(testsample.Item1, testsample.Item3, this._validAccWindow);
 
                 this._lossWindow.Add(this._trainer.Loss);
 
-                Console.WriteLine("Loss: {0} Train accuracy: {1}% Test accuracy: {2}%", this._trainer.Loss,
-                    Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2),
-                    Math.Round(this._testAccWindow.Items.Average() * 100.0, 2));
+                Console.WriteLine("Loss: {0} Train accuracy: {1}%", this._trainer.Loss,
+                    Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
+                    //Math.Round(this._validAccWindow.Items.Average() * 100.0, 2));
 
-                Console.WriteLine("Example seen: {0} Fwd: {1}ms Bckw: {2}ms", this._stepCount,
+                Console.WriteLine("Pairs seen: {0} Fwd: {1}ms Bckw: {2}ms", this._stepCount / 2,
                     Math.Round(this._trainer.ForwardTimeMs, 2),
                     Math.Round(this._trainer.BackwardTimeMs, 2));
             } while (!Console.KeyAvailable);
 
         }
+
+
+        private void Train(Volume x, Volume y, int[] labels)
+        {
+            this._trainer.Train(x, y);
+
+            Test(x, labels, this._trainAccWindow, false);
+
+            this._stepCount += labels.Length;
+        }
+
+
 
         private void Test(Volume x, int[] labels, CircularBuffer<double> accuracy, bool forward = true)
         {
@@ -109,38 +122,30 @@ namespace ATTFace
                     == predictions[i]
                     ? 1.0 : 0.0);
 
-
-
                 //why? why not? ;O
                 //                          Are the labels the same?            Does Prediction match result?
             }
 
-            bool displayImages = true;
+
+
+
+            //Show image toggle
+            bool displayImages = false;
+
+
             if (!displayImages) return;
             //if (this._stepCount < 2000) return;
 
             SNet<double>.SplitVolumes(x, out ConvNetSharp.Volume.Volume<double> v1, out ConvNetSharp.Volume.Volume<double> v2);
 
-            var numbers = VolumeToBitmap(v1 as Volume, 28, 28);
-            var numbers2 = VolumeToBitmap(v2 as Volume, 28, 28);
+            var numbers = VolumeToBitmap(v1 as Volume, 92, 112);
+            var numbers2 = VolumeToBitmap(v2 as Volume, 92, 112);
 
             var popup = new DisplayImage();
-            //int count = 0;
-            //for (int i = this._stepCount; i < this._stepCount + predictions.Length * 2; i+= 2)
-            //{
-            //    Double res = (labels[count * 2] == labels[count * 2 + 1] ? 1.0 : 0.0) == (double)predictions[count] ? 1.0 : 0.0;
-            //    popup.DisplayData(this.datasets.Train.getImage(i), labels[count], 
-            //        this.datasets.Train.getImage(i + 1), labels[count + 1],
-            //        res.ToString() );
-            //    popup.ShowDialog();
-
-            //    count++;
-
-            //}
 
             for (int i = 0; i < predictions.Length; i++)
             {
-                if (predictions[i] != 1) continue;
+                //if (predictions[i] != 1) continue;
                 //double res = (labels[i * 2] == labels[i * 2 + 1] ? 1.0 : 0.0);
                 popup.DisplayData(numbers[i], labels[i * 2], numbers2[i], labels[i * 2 + 1], predictions[i].ToString());
                 popup.ShowDialog();
@@ -148,20 +153,8 @@ namespace ATTFace
 
         }
 
-        private void Train(Volume x, Volume y, int[] labels)
-        {
-            this._trainer.Train(x, y);
 
-            Test(x, labels, this._trainAccWindow, false);
-
-            this._stepCount += labels.Length;
-        }
-
-
-
-
-
-
+        
         private List<Bitmap> VolumeToBitmap(Volume v, int width, int height)
         {
             List<Bitmap> bmps = new List<Bitmap>();

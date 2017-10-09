@@ -138,18 +138,18 @@ namespace ConvNetSharp.SNet
 
                             double aval, xval, yval;
 
-                            //if (x - y == 0)
-                            //{
-                            //    xval = 0;
-                            //    yval = 0;
-                            //    aval = 0;
-                            //}
-                            //else
-                            //{
-                            xval = (a * ((x - y) / Math.Abs(x - y))) * ChainGradient;
-                            yval = (a * (-(x - y) / Math.Abs(x - y))) * ChainGradient;
-                            aval = (Math.Abs(x - y)) * ChainGradient;
-                            //}
+                            if (x - y == 0) //Prevents the same image from breaking the snet.
+                            {
+                                xval = 0;
+                                yval = 0;
+                                aval = 0;
+                            }
+                            else
+                            {
+                                xval = (a * ((x - y) / Math.Abs(x - y))) * ChainGradient;
+                                yval = (a * (-(x - y) / Math.Abs(x - y))) * ChainGradient;
+                                aval = (Math.Abs(x - y)) * ChainGradient;
+                            }
 
                             inputGradients.Set(width, height, depth, n,
                                 inputGradients.Get(width, height, depth, n) + xval);

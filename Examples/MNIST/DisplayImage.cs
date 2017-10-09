@@ -70,9 +70,5 @@ namespace ATTFace
             }
             return bmp;
         }
-
-
-
-
     }
 }

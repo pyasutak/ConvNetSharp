@@ -54,6 +54,7 @@ namespace ConvNetSharp.SNet
             //{
             try
             {
+                //Obsolete now?
                 ValidateTwin();
             }
             catch
@@ -105,12 +106,15 @@ namespace ConvNetSharp.SNet
             var lastDistanceLayer = this.DistanceLayers[dn - 1];
             if (lastLayer != null && lastLayerTwin != null) //This doesn't do anything. 
             {
-                //TODO: I cut out implementation for loss. Requires ILastLayer interface.
+                //TODO: I cut out implementation for loss. Requires ILastLayer interface. done, see below
                 //Or it would... if the ILastLayer interface did anything. Loss is now implemented in this method.
 
-                for (int i = 0; i < expectedOutput.Shape.Dimensions[3]; i++)
-                    if (Ops<T>.GreaterThan(expectedOutput.Get(0, 0, 0, i), Ops<T>.Zero))
-                        break;
+
+                //whattehfux does this code do?:
+
+                //for (int i = 0; i < expectedOutput.Shape.Dimensions[3]; i++)
+                //    if (Ops<T>.GreaterThan(expectedOutput.Get(0, 0, 0, i), Ops<T>.Zero))
+                //        break;
 
                 //Preprocess expectedOutput wrt distance.
                 //Volume<T> snetExpected = this.DistanceBackward(expectedOutput); //Review implementation!!
@@ -123,12 +127,12 @@ namespace ConvNetSharp.SNet
                 }
 
                 //Might want to add some checks here......
+                //split SVolume into two Volumes for standard processing.
                 var distanceLayerTwinGradients = (this.DistanceLayers[0] as TwinJoinLayer).InputTwinActivationGradients as Volume<T>;
-                //if (firstDistanceLayer == null) throw new Exception("The distance layer must start with a TwinJoinLayer, for SNets!");
 
-                lastLayer.Backward(this.DistanceLayers[0].InputActivationGradients); // last layer assumed to be loss layer
+                lastLayer.Backward(this.DistanceLayers[0].InputActivationGradients);
                 lastLayerTwin.Backward(distanceLayerTwinGradients);
-                //this.BalanceGradients(n - 1);
+                this.BalanceGradients(n - 1);
                 for (int i = n - 2; i >= 0; i--)
                 {
                     // first layer assumed input //What does this meaaaaaan???
@@ -136,7 +140,7 @@ namespace ConvNetSharp.SNet
                     this.LayersTwin[i].Backward(this.LayersTwin[i + 1].InputActivationGradients);
 
                     //Balance Gradients --- balance everything at the end????
-                    //this.BalanceGradients(i);
+                    this.BalanceGradients(i);
                 }
 
 
@@ -144,6 +148,8 @@ namespace ConvNetSharp.SNet
                 //Balance Gradients
                 //for (int i = 0; i < n; i++)
                 //    BalanceGradients(i);
+                //BalanceParameters();
+
 
 
                 //Calculate Loss.
@@ -170,6 +176,45 @@ namespace ConvNetSharp.SNet
                     }
                 }
                 loss = Ops<T>.Negate(loss);
+
+
+
+                ////Contrastive Loss
+                //var euclideanDistance = this.DistanceLayers[0].OutputActivation.Storage.Get(0);
+                //T m = Ops<T>.Cast(1.0);
+                //for (var N = 0; N < y.Shape.GetDimension(3); N++)
+                //{
+                //    for (var d = 0; d < y.Shape.GetDimension(2); d++)
+                //    {
+                //        for (var h = 0; h < y.Shape.GetDimension(1); h++) //always 1
+                //        {
+                //            for (var w = 0; w < y.Shape.GetDimension(0); w++) //always 1
+                //            {
+                //                var expected = y.Get(w, h, d, N);
+                //                if (Ops<T>.GreaterThan(Ops<T>.One, expected))
+                //                    expected = Ops<T>.Zero;
+ 
+                //                var match = Ops<T>.Multiply(Ops<T>.Subtract(Ops<T>.One, expected), Ops<T>.Multiply(Ops<T>.Cast(0.5), Ops<T>.Pow(euclideanDistance, Ops<T>.Cast(2.0))));
+                //                var nomatch = Ops<T>.Multiply(expected, Ops<T>.Multiply(Ops<T>.Cast(0.5), Ops<T>.Pow(Ops<T>.Subtract(Ops<T>.One, euclideanDistance), Ops<T>.Cast(2.0))));
+                //                if (!Ops<T>.GreaterThan(nomatch, Ops<T>.Zero))
+                //                    nomatch = Ops<T>.Epsilon;
+ 
+                //                var current = Ops<T>.Add(match,nomatch);
+ 
+                //                //var actual = joinLayer.OutputActivation.Storage.Get(w, h, d, N);
+                //                //if (Ops<T>.Zero.Equals(actual))
+                //                //    actual = Ops<T>.Epsilon;
+                //                //var current = Ops<T>.Multiply(expected, Ops<T>.Log(actual));
+ 
+                //                loss = Ops<T>.Add(loss, current);
+                //            }
+                //        }
+                //    }
+                //}
+ 
+
+
+
 
                 return loss;
             }
@@ -268,100 +313,78 @@ namespace ConvNetSharp.SNet
             }
         }
 
-        ////Obsolete.
+
+        private void BalanceGradients(int layerIndex)
+        {
+            
+
+
+            var pandg = Layers[layerIndex].GetParametersAndGradients();
+            var pandgT = LayersTwin[layerIndex].GetParametersAndGradients();
+
+            for (int i = 0; i < pandg.Count; i++)
+            {
+
+
+                //}
+                var gradient = pandg[i].Gradient;
+                var gradientT = pandgT[i].Gradient;
+                var temp = gradient.Clone();
+
+                //Verify dimensions??? Why even bother at this point?
+
+                //var width = gradient.Shape.GetDimension(0);
+                //var height = gradient.Shape.GetDimension(1);
+                //var depth = gradient.Shape.GetDimension(2);
+                //var batch = gradient.Shape.GetDimension(3);
+
+
+                //var avg = BuilderInstance<T>.Volume.SameAs(gradient.Shape);
+                //gradient.Storage.Map((x, y) => Ops<T>.Divide(Ops<T>.Add(x, y), Ops<T>.Cast(2)), gradientT.Storage, avg.Storage);
+
+                //var avg = gradient + gradientT * Ops<T>.Cast(0.5);
+
+                gradient.DoAdd(gradientT, gradient);
+                //gradient.DoMultiply(gradient, Ops<T>.Cast(0.5)); //Additive instead of average
+                gradientT.DoAdd(temp, gradientT);
+                //gradientT.DoMultiply(gradientT, Ops<T>.Cast(0.5));
+
+                //this does nothing. lel. The only gradients that are trained upon are those passed in GetParametersAndGradients()
+                //better now. wew
+
+            }
+
+            
+            //RETHINK THIS PROCESS...
+            /*
+             * Rebalancing the gradients at every level makes the entire point of the siamese network irrelevant.
+             * Rebalance gradients at the end of the backward.
+             * What needs to be rebalanced? EVERYTHING???
+             * Everything that needs to be verified.
+             * I.E. everything that backwards() can change.
+             * 
+             * Could use:
+             * GetParametersAndGradients()
+             * to balance the layers.
+             * Ultimately, the actual values in the layers are in the parameters and gradients.
+             * 
+             * However... The training algorithm updates the layers based upon the inputactivationgradients... so those should be used.
+             * As long as the training algorithm sees that the twin layers have the same inputActivationGradients, they should be 
+             *  updated to the same values.
+             *  
+             *  Basically, leave as is?
+             */
 
 
 
-        ////To be Removed.
-        //private void BalanceGradients(int layerIndex)
-        //{
-        //    /**
-        //     * Average the Gradients between the twin nets for layer at specified index.
-        //     * Steps:
-        //     * 
-        //     * Get Output of twin layers.
-        //     * Average Output
-        //     * Set Output to average.
-        //     * 
-        //     * Backwards() uses the next layer's InputActivationGradients.
-        //     * Must balance those.
-        //     * 
-        //     * OutputActivation is the activation for the next layer to use.
-        //     * OutputActivationGradients is the gradients from the output
-        //     * InputActivation is what is used for forward.
-        //     * InputActivationGradients is how the InputActivation varies based upon error.
-        //     * 
-        //     * All of these are Volume<T>.
-        //     * 
-        //     * Get(int[] coords)
-        //     * Set(int[] coords, T value)
-        //     * has:
-        //     *  w
-        //     *  h
-        //     *  c
-        //     *  n
-        //     *  
-        //     * 
-        //     * 
-        //     * 
-        //     * */
-
-
-
-
-
-        //    var gradient = Layers[layerIndex].InputActivationGradients;
-        //    var gradientT = LayersTwin[layerIndex].InputActivationGradients;
-        //    var temp = gradient.Clone();
-
-        //    //Verify dimensions??? Why even bother at this point?
-
-        //    //var width = gradient.Shape.GetDimension(0);
-        //    //var height = gradient.Shape.GetDimension(1);
-        //    //var depth = gradient.Shape.GetDimension(2);
-        //    //var batch = gradient.Shape.GetDimension(3);
-
-
-        //    //var avg = BuilderInstance<T>.Volume.SameAs(gradient.Shape);
-        //    //gradient.Storage.Map((x, y) => Ops<T>.Divide(Ops<T>.Add(x, y), Ops<T>.Cast(2)), gradientT.Storage, avg.Storage);
-
-        //    //var avg = gradient + gradientT * Ops<T>.Cast(0.5);
-
-        //    gradient.DoAdd(gradientT, gradient);
-        //    gradient.DoMultiply(gradient, Ops<T>.Cast(0.5));
-        //    gradientT.DoAdd(temp, gradientT);
-        //    gradientT.DoMultiply(gradientT, Ops<T>.Cast(0.5));
-
-        //    //RETHINK THIS PROCESS...
-        //    /*
-        //     * Rebalancing the gradients at every level makes the entire point of the siamese network irrelevant.
-        //     * Rebalance gradients at the end of the backward.
-        //     * What needs to be rebalanced? EVERYTHING???
-        //     * Everything that needs to be verified.
-        //     * I.E. everything that backwards() can change.
-        //     * 
-        //     * Could use:
-        //     * GetParametersAndGradients()
-        //     * to balance the layers.
-        //     * Ultimately, the actual values in the layers are in the parameters and gradients.
-        //     * 
-        //     * However... The training algorithm updates the layers based upon the inputactivationgradients... so those should be used.
-        //     * As long as the training algorithm sees that the twin layers have the same inputActivationGradients, they should be 
-        //     *  updated to the same values.
-        //     *  
-        //     *  Basically, leave as is?
-        //     */
-
-
-
-        //}
+        }
 
 
 
         private void BalanceParameters()
         {
             Func<T, T, T> avg = (x, y) => Ops<T>.Divide(Ops<T>.Add(x, y), Ops<T>.Cast(2.0));
-            Func<T, T> copy = x => x;
+            //Func<T, T> copy = x => x;
 
 
 
@@ -709,9 +732,7 @@ namespace ConvNetSharp.SNet
 
         }
 
-
-
-
+        
 
         public void Dump(string filename)
         {
@@ -779,8 +800,7 @@ namespace ConvNetSharp.SNet
             //Or I can just work with the int[] arrays.
             //Either way, this method is too clunky and not worthwhile...???
 
-
-            var dim = v.Shape.Dimensions;
+            var dim = new List<int>(v.Shape.Dimensions.ToArray());
             dim[dim.Count - 1] *= 2;
 
             var datasize = v.Shape.TotalLength;
@@ -789,52 +809,6 @@ namespace ConvNetSharp.SNet
             v2.ToArray().CopyTo(data, (int)datasize);
 
             return BuilderInstance<T>.Volume.SameAs(data, new Shape(dim));
-
-
-
-
-            //var shape = v.Shape.Dimensions; //Modify this to a deep copy.
-            //while (shape.Count < 4)
-            //{
-            //    shape.Add(1);
-            //}
-            //var join = BuilderInstance<T>.Volume.SameAs(new Shape(shape[0] * 2, shape[1] * 2, shape[2] * 2, shape[3] * 2));
-
-            //var outputShape = new Shape(this.OutputWidth, this.OutputHeight, this.OutputDepth, input.Shape.DimensionCount == 4 ? input.Shape.GetDimension(3) : 1);
-
-            //for (int n = 0; n < shape[3]; n++)
-            //{
-            //    for (int d = 0; d < shape[2]; d++)
-            //    {
-            //        for (int h = 0; h < shape[1]; h++)
-            //        {
-            //            for (int w = 0; w < shape[0]; w++)
-            //            {
-            //                join.Set(w, h, d, n, v.Get(w, h, d, n));
-            //            }
-            //        }
-            //    }
-            //}
-
-            //for (int n = shape[3]; n < shape[3] * 2; n++)
-            //{
-            //    for (int d = shape[2]; d < shape[2] * 2; d++)
-            //    {
-            //        for (int h = shape[1]; h < shape[1] * 2; h++)
-            //        {
-            //            for (int w = shape[0]; w < shape[0] * 2; w++)
-            //            {
-            //                join.Set(w, h, d, n, v.Get(w - shape[0], h - shape[1], d - shape[2], n - shape[3]));
-            //            }
-            //        }
-            //    }
-            //}
-
-            //return join;
-
-
-
-
         }
 
         public static void SplitVolumes(Volume<T> source, out Volume<T> split1, out Volume<T> split2)
