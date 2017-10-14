@@ -34,10 +34,14 @@ namespace ATTFace
             {
                 for (var i = this._trainImages.Count - 1; i >= 0; i--)
                 {
-                    //25% of the time find a matching entry.
-                    var findMatch = this._random.NextDouble() < 0.3;
+                    //50% of the time find a matching entry.
+                    var findMatch = false;
+                    
+                    //If i is not odd, the match will not line up to be tried against each other.
+                    if (i % 2 == 1)
+                        findMatch = this._random.NextDouble() > 0.5;
 
-                    if (findMatch)
+                    if (findMatch && i > 0)
                     {
                         ATTEntry current = this._trainImages[i];
                         int randomIndex;
@@ -49,9 +53,9 @@ namespace ATTFace
                         }
                         while (current.Label != this._trainImages[randomIndex].Label || randomIndex == i);
                         
-                        //swap match into position.
+                        //swap match into next position.
                         ATTEntry temp = this._trainImages[randomIndex];
-                        this._trainImages[randomIndex] = this._trainImages[i];
+                        this._trainImages[randomIndex] = this._trainImages[--i];
                         this._trainImages[i] = temp;
                     }
                     else
@@ -110,30 +114,30 @@ namespace ATTFace
 
 
                 //25% of the time find a matching entry.
-                var findMatch = this._random.NextDouble() < 0.25;
+                //var findMatch = this._random.NextDouble() < 0.25;
 
                 ATTEntry entry = this._trainImages[this._start++];
-                ATTEntry entry2;
-                if (findMatch)
-                {
-                    int randomIndex;
-                    do
-                    {
-                        //find a match.
-                        randomIndex = this._random.Next(this._trainImages.Count);
-                    }
-                    while (entry.Label != this._trainImages[randomIndex].Label);
+                ATTEntry entry2 = this._trainImages[this._start++];
+                //if (findMatch)
+                //{
+                //    int randomIndex;
+                //    do
+                //    {
+                //        //find a match.
+                //        randomIndex = this._random.Next(this._trainImages.Count);
+                //    }
+                //    while (entry.Label != this._trainImages[randomIndex].Label);
 
-                    //swap match into position.
-                    ATTEntry temp = this._trainImages[randomIndex];
-                    this._trainImages[randomIndex] = this._trainImages[this._start];
-                    this._trainImages[this._start] = temp;
-                    entry2 = this._trainImages[this._start++];
-                }
-                else
-                {
-                    entry2 = this._trainImages[this._start++]; // Array out of index HERE
-                }
+                //    //swap match into position.
+                //    ATTEntry temp = this._trainImages[randomIndex];
+                //    this._trainImages[randomIndex] = this._trainImages[this._start];
+                //    this._trainImages[this._start] = temp;
+                //    entry2 = this._trainImages[this._start++];
+                //}
+                //else
+                //{
+                //    entry2 = this._trainImages[this._start++]; // Array out of index HERE
+                //}
 
                 //Store image label.
                 labels[i * 2] = entry.Label;
@@ -151,9 +155,9 @@ namespace ATTFace
                 }
 
                 //Store expected output.
-                var compare = 1.0;
+                var compare = 0.0;
                 if (labels[i * 2] == labels[i * 2 + 1])
-                    compare = 0.5;
+                    compare = 1.0;
                 expected[i] = compare;
 
                 //expected output is dim: [1, 1, 1, batchSize]. Either 1.0(no match), or 0.5 (match)

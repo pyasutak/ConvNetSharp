@@ -702,8 +702,8 @@ namespace ConvNetSharp.SNet
             var sigmoid = lastLayer as SigmoidLayer<T>;
             if (sigmoid != null)
             {
-                matchTarget = Ops<T>.Cast(0.5);
-                matchThreshold = Ops<T>.Cast(0.2);
+                matchTarget = Ops<T>.Cast(1.0);
+                matchThreshold = Ops<T>.Cast(0.1);
             }
 
             var joinlayer = lastLayer as ILastLayer<T>;
