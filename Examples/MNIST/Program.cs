@@ -57,19 +57,18 @@ namespace ATTFace
             this._snet.AddLayer(new ConvLayer(5, 5, 32) { Stride = 1, Pad = 2 });   //46 x  56 x  8 x 20
             this._snet.AddLayer(new ReluLayer());                                   //46 x  56 x 16 x 20
             this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //46 x  56 x 16 x 20
-            //this._snet.AddLayer(new FullyConnLayer(100));                           //23 x  28 x 16 x 20
-            //this._snet.AddLayer(new SigmoidLayer());
-            //this._snet.AddLayer(new SoftmaxLayer(10));
+            this._snet.AddLayer(new FullyConnLayer(100));                           //23 x  28 x 16 x 20
+            this._snet.AddLayer(new SigmoidLayer());
 
             this._snet.AddDistanceLayer(new TwinJoinLayer()); //Closer to 0 the better.
             this._snet.AddDistanceLayer(new SigmoidLayer());  //Closer to 0.5 the better. 
 
             this._trainer = new SgdTrainer<double>(this._snet)
             {
-                LearningRate = 0.05,
+                LearningRate = 0.1,
                 BatchSize = 20,
-                L2Decay = 0.001
-                //Momentum = 0.9
+                L2Decay = 0.01,
+                Momentum = 0.9
             };
 
             // Do learning

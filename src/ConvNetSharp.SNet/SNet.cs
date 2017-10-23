@@ -97,13 +97,13 @@ namespace ConvNetSharp.SNet
 
         }
 
-        public T Backward(Volume<T> expectedOutput)
+        public T Backward(Volume<T> y)
         {
             var n = this.Layers.Count;
             var dn = this.DistanceLayers.Count;
             var lastLayer = this.Layers[n - 1];
             var lastLayerTwin = this.LayersTwin[n - 1];
-            var lastDistanceLayer = this.DistanceLayers[dn - 1];
+            var lastDistanceLayer = this.DistanceLayers[dn - 1] as ILastLayer<T>;
             if (lastLayer != null && lastLayerTwin != null) //This doesn't do anything. 
             {
                 //TODO: I cut out implementation for loss. Requires ILastLayer interface. done, see below
@@ -120,7 +120,9 @@ namespace ConvNetSharp.SNet
                 //Volume<T> snetExpected = this.DistanceBackward(expectedOutput); //Review implementation!!
                 //Above should return two Volumes, for either network.
 
-                lastDistanceLayer.Backward(expectedOutput);
+                T loss;
+
+                lastDistanceLayer.Backward(y, out loss);
                 for (int i = dn - 2; i >= 0; i--)
                 {
                     this.DistanceLayers[i].Backward(this.DistanceLayers[i + 1].InputActivationGradients);
@@ -152,30 +154,29 @@ namespace ConvNetSharp.SNet
 
 
 
-                //Calculate Loss.
-                T loss = Ops<T>.Zero;
-                var y = expectedOutput;
+                //Calculate Loss. --------------> Moved to lastDistanceLayer
+                //var y = y;
 
-                for (var N = 0; N < y.Shape.GetDimension(3); N++)
-                {
-                    for (var d = 0; d < y.Shape.GetDimension(2); d++)
-                    {
-                        for (var h = 0; h < y.Shape.GetDimension(1); h++)
-                        {
-                            for (var w = 0; w < y.Shape.GetDimension(0); w++)
-                            {
-                                var expected = y.Get(w, h, d, N);
-                                var actual = lastDistanceLayer.OutputActivation.Storage.Get(w, h, d, N);
-                                if (Ops<T>.Zero.Equals(actual))
-                                    actual = Ops<T>.Epsilon;
-                                var current = Ops<T>.Multiply(expected, Ops<T>.Log(actual));
+                //for (var N = 0; N < y.Shape.GetDimension(3); N++)
+                //{
+                //    for (var d = 0; d < y.Shape.GetDimension(2); d++)
+                //    {
+                //        for (var h = 0; h < y.Shape.GetDimension(1); h++)
+                //        {
+                //            for (var w = 0; w < y.Shape.GetDimension(0); w++)
+                //            {
+                //                var expected = y.Get(w, h, d, N);
+                //                var actual = lastDistanceLayer.OutputActivation.Storage.Get(w, h, d, N);
+                //                if (Ops<T>.Zero.Equals(actual))
+                //                    actual = Ops<T>.Epsilon;
+                //                var current = Ops<T>.Multiply(expected, Ops<T>.Log(actual));
 
-                                loss = Ops<T>.Add(loss, current);
-                            }
-                        }
-                    }
-                }
-                loss = Ops<T>.Negate(loss);
+                //                loss = Ops<T>.Add(loss, current);
+                //            }
+                //        }
+                //    }
+                //}
+                //loss = Ops<T>.Negate(loss);
 
 
 
@@ -223,6 +224,8 @@ namespace ConvNetSharp.SNet
         }
 
         //UPDATE
+
+        //obsolete?
         public void ValidateTwin()
         {
             /**
@@ -317,7 +320,7 @@ namespace ConvNetSharp.SNet
         private void BalanceGradients(int layerIndex)
         {
             
-
+            //updated now to use GetParametersAndGradients. Works as intended.
 
             var pandg = Layers[layerIndex].GetParametersAndGradients();
             var pandgT = LayersTwin[layerIndex].GetParametersAndGradients();
@@ -357,6 +360,9 @@ namespace ConvNetSharp.SNet
             
             //RETHINK THIS PROCESS...
             /*
+             * 
+             * 
+             * 
              * Rebalancing the gradients at every level makes the entire point of the siamese network irrelevant.
              * Rebalance gradients at the end of the backward.
              * What needs to be rebalanced? EVERYTHING???
@@ -380,7 +386,7 @@ namespace ConvNetSharp.SNet
         }
 
 
-
+        //made obsolete by BalanceGradients()
         private void BalanceParameters()
         {
             Func<T, T, T> avg = (x, y) => Ops<T>.Divide(Ops<T>.Add(x, y), Ops<T>.Cast(2.0));
@@ -529,9 +535,7 @@ namespace ConvNetSharp.SNet
 
 
         //Obsolete.
-
-
-
+        
         ////To be removed:
         //private static LayerBase<T> CloneLayer(LayerBase<T> source)
         //{
@@ -702,8 +706,8 @@ namespace ConvNetSharp.SNet
             var sigmoid = lastLayer as SigmoidLayer<T>;
             if (sigmoid != null)
             {
-                matchTarget = Ops<T>.Cast(1.0);
-                matchThreshold = Ops<T>.Cast(0.1);
+                matchTarget = Ops<T>.Cast(0.5);
+                matchThreshold = Ops<T>.Cast(0.2);
             }
 
             var joinlayer = lastLayer as ILastLayer<T>;

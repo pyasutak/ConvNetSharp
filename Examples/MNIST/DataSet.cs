@@ -155,9 +155,9 @@ namespace ATTFace
                 }
 
                 //Store expected output.
-                var compare = 0.0;
+                var compare = 1.0;
                 if (labels[i * 2] == labels[i * 2 + 1])
-                    compare = 1.0;
+                    compare = 0.5;
                 expected[i] = compare;
 
                 //expected output is dim: [1, 1, 1, batchSize]. Either 1.0(no match), or 0.5 (match)
