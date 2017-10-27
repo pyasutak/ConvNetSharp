@@ -52,17 +52,17 @@ namespace ConvNetSharp.SNet
             //Doesn't quite work... Needs to be called one more time after training. Possibly better solution.
             //if (isTraining)
             //{
-            try
-            {
-                //Obsolete now?
-                ValidateTwin();
-            }
-            catch
-            {
-                BalanceParameters();
-                //Test
-                //ValidateTwin();
-            }
+            //try
+            //{
+            //    //Obsolete now?
+            //    ValidateTwin();
+            //}
+            //catch
+            //{
+            //    BalanceParameters();
+            //    //Test
+            //    //ValidateTwin();
+            //}
             //}
 
             var activationA = this.Layers[0].DoForward(inputA, isTraining);
@@ -104,7 +104,7 @@ namespace ConvNetSharp.SNet
             var lastLayer = this.Layers[n - 1];
             var lastLayerTwin = this.LayersTwin[n - 1];
             var lastDistanceLayer = this.DistanceLayers[dn - 1] as ILastLayer<T>;
-            if (lastLayer != null && lastLayerTwin != null) //This doesn't do anything. 
+            if (lastLayer != null && lastLayerTwin != null)
             {
                 //TODO: I cut out implementation for loss. Requires ILastLayer interface. done, see below
                 //Or it would... if the ILastLayer interface did anything. Loss is now implemented in this method.
@@ -115,11 +115,7 @@ namespace ConvNetSharp.SNet
                 //for (int i = 0; i < expectedOutput.Shape.Dimensions[3]; i++)
                 //    if (Ops<T>.GreaterThan(expectedOutput.Get(0, 0, 0, i), Ops<T>.Zero))
                 //        break;
-
-                //Preprocess expectedOutput wrt distance.
-                //Volume<T> snetExpected = this.DistanceBackward(expectedOutput); //Review implementation!!
-                //Above should return two Volumes, for either network.
-
+                
                 T loss;
 
                 lastDistanceLayer.Backward(y, out loss);
@@ -137,23 +133,15 @@ namespace ConvNetSharp.SNet
                 this.BalanceGradients(n - 1);
                 for (int i = n - 2; i >= 0; i--)
                 {
-                    // first layer assumed input //What does this meaaaaaan???
+                    // first layer assumed input 
                     this.Layers[i].Backward(this.Layers[i + 1].InputActivationGradients);
                     this.LayersTwin[i].Backward(this.LayersTwin[i + 1].InputActivationGradients);
 
-                    //Balance Gradients --- balance everything at the end????
+                    //Balance Gradients
                     this.BalanceGradients(i);
                 }
 
-
-                //Depreciate this.
-                //Balance Gradients
-                //for (int i = 0; i < n; i++)
-                //    BalanceGradients(i);
-                //BalanceParameters();
-
-
-
+                
                 //Calculate Loss. --------------> Moved to lastDistanceLayer
                 //var y = y;
 
@@ -213,9 +201,7 @@ namespace ConvNetSharp.SNet
                 //    }
                 //}
  
-
-
-
+                
 
                 return loss;
             }
@@ -225,96 +211,96 @@ namespace ConvNetSharp.SNet
 
         //UPDATE
 
-        //obsolete?
-        public void ValidateTwin()
-        {
-            /**
-             * Constant values for LayerBase:
-             * InputActivation
-             * OutputActivation
-             * InputActivationGradients
-             * OutputActivationGradients
-             * Input/Output Height/Width/Depth
-             * 
-             * 
-             * 
-             * The thing to check is Parameters and Gradients, Foolish past self.
-             * Do I really need to check all of the minor class variables for each layer?
-             *  They are not changed once initialized... but it might be important to check each layer for consistency...???
-             * 
-             * 
-             * 
-             */
+        //Currently unused. Required for testing.
+        //public void ValidateTwin()
+        //{
+        //    /**
+        //     * Constant values for LayerBase:
+        //     * InputActivation
+        //     * OutputActivation
+        //     * InputActivationGradients
+        //     * OutputActivationGradients
+        //     * Input/Output Height/Width/Depth
+        //     * 
+        //     * 
+        //     * 
+        //     * The thing to check is Parameters and Gradients, Foolish past self.
+        //     * Do I really need to check all of the minor class variables for each layer?
+        //     *  They are not changed once initialized... but it might be important to check each layer for consistency...???
+        //     * 
+        //     * 
+        //     * 
+        //     */
 
 
 
 
 
 
-            Func<T, T, T> verify = (x, y) => Ops<T>.Equals(x, y) ? x : throw new Exception("The Siamese Net is invalid.");
+        //    Func<T, T, T> verify = (x, y) => Ops<T>.Equals(x, y) ? x : throw new Exception("The Siamese Net is invalid.");
 
-            for (int i = 0; i < Layers.Count; i++)
-            {
-                var l = Layers[i];
-                var lt = LayersTwin[i];
+        //    for (int i = 0; i < Layers.Count; i++)
+        //    {
+        //        var l = Layers[i];
+        //        var lt = LayersTwin[i];
 
 
 
-                //Really want to check these????
-                //var inGradientsVerification = BuilderInstance<T>.Volume.SameAs(l.InputActivationGradients.Shape).Storage;
-                //l.InputActivationGradients.Storage.Map(verify, lt.InputActivationGradients.Storage, inGradientsVerification);
-                //var outGradientsVerification = BuilderInstance<T>.Volume.SameAs(l.OutputActivationGradients.Shape).Storage;
-                //l.OutputActivationGradients.Storage.Map(verify, lt.OutputActivationGradients.Storage, outGradientsVerification);
+        //        //Really want to check these????
+        //        //var inGradientsVerification = BuilderInstance<T>.Volume.SameAs(l.InputActivationGradients.Shape).Storage;
+        //        //l.InputActivationGradients.Storage.Map(verify, lt.InputActivationGradients.Storage, inGradientsVerification);
+        //        //var outGradientsVerification = BuilderInstance<T>.Volume.SameAs(l.OutputActivationGradients.Shape).Storage;
+        //        //l.OutputActivationGradients.Storage.Map(verify, lt.OutputActivationGradients.Storage, outGradientsVerification);
 
-                /*
-                 * convlayer
-                 * fullyconnlayer
-                 *  :Filter, Bias
-                 *  
-                 * PoolLayer
-                 *  :Width, Height, Stride, Pad
-                 * 
-                 * 
-                 */
+        //        /*
+        //         * convlayer
+        //         * fullyconnlayer
+        //         *  :Filter, Bias
+        //         *  
+        //         * PoolLayer
+        //         *  :Width, Height, Stride, Pad
+        //         * 
+        //         * 
+        //         */
 
-                var convl = l as ConvLayer<T>;
-                if (convl != null)
-                {
-                    var convlt = lt as ConvLayer<T>;
-                    if (convlt == null) throw new Exception("The Layers in the Siamese Net are not valid!");
+        //        var convl = l as ConvLayer<T>;
+        //        if (convl != null)
+        //        {
+        //            var convlt = lt as ConvLayer<T>;
+        //            if (convlt == null) throw new Exception("The Layers in the Siamese Net are not valid!");
 
-                    var filtersVerification = BuilderInstance<T>.Volume.SameAs(convl.Filters.Shape).Storage;
-                    convl.Filters.Storage.Map(verify, convlt.Filters.Storage, filtersVerification);
-                    var biasVerification = BuilderInstance<T>.Volume.SameAs(convl.Bias.Shape).Storage;
-                    convl.Bias.Storage.Map(verify, convlt.Bias.Storage, biasVerification);
-                }
+        //            var filtersVerification = BuilderInstance<T>.Volume.SameAs(convl.Filters.Shape).Storage;
+        //            convl.Filters.Storage.Map(verify, convlt.Filters.Storage, filtersVerification);
+        //            var biasVerification = BuilderInstance<T>.Volume.SameAs(convl.Bias.Shape).Storage;
+        //            convl.Bias.Storage.Map(verify, convlt.Bias.Storage, biasVerification);
+        //        }
 
-                var connl = l as FullyConnLayer<T>;
-                if (connl != null)
-                {
-                    var connlt = lt as FullyConnLayer<T>;
-                    if (connlt == null) throw new Exception("The Layers in the Siamese Net are not valid!");
+        //        var connl = l as FullyConnLayer<T>;
+        //        if (connl != null)
+        //        {
+        //            var connlt = lt as FullyConnLayer<T>;
+        //            if (connlt == null) throw new Exception("The Layers in the Siamese Net are not valid!");
 
-                    var filtersVerification = BuilderInstance<T>.Volume.SameAs(connl.Filters.Shape).Storage;
-                    connl.Filters.Storage.Map(verify, connlt.Filters.Storage, filtersVerification);
-                    var biasVerification = BuilderInstance<T>.Volume.SameAs(connl.Bias.Shape).Storage;
-                    connl.Bias.Storage.Map(verify, connlt.Bias.Storage, biasVerification);
-                }
+        //            var filtersVerification = BuilderInstance<T>.Volume.SameAs(connl.Filters.Shape).Storage;
+        //            connl.Filters.Storage.Map(verify, connlt.Filters.Storage, filtersVerification);
+        //            var biasVerification = BuilderInstance<T>.Volume.SameAs(connl.Bias.Shape).Storage;
+        //            connl.Bias.Storage.Map(verify, connlt.Bias.Storage, biasVerification);
+        //        }
 
-                var pl = l as PoolLayer<T>;
-                if (pl != null)
-                {
-                    var plt = lt as PoolLayer<T>;
-                    if (plt == null) throw new Exception("The Layers in the Siamese Net are not valid!");
+        //        var pl = l as PoolLayer<T>;
+        //        if (pl != null)
+        //        {
+        //            var plt = lt as PoolLayer<T>;
+        //            if (plt == null) throw new Exception("The Layers in the Siamese Net are not valid!");
 
-                    if (pl.Width != plt.Width) throw new Exception("Poll Layer's Widths do not match.");
-                    if (pl.Height != plt.Height) throw new Exception("Poll Layer's Heights do not match.");
-                    if (pl.Stride != plt.Stride) throw new Exception("Poll Layer's Strides do not match.");
-                    if (pl.Pad != plt.Pad) throw new Exception("Poll Layer's Pads do not match.");
-                }
+        //            if (pl.Width != plt.Width) throw new Exception("Poll Layer's Widths do not match.");
+        //            if (pl.Height != plt.Height) throw new Exception("Poll Layer's Heights do not match.");
+        //            if (pl.Stride != plt.Stride) throw new Exception("Poll Layer's Strides do not match.");
+        //            if (pl.Pad != plt.Pad) throw new Exception("Poll Layer's Pads do not match.");
+        //        }
 
-            }
-        }
+        //    }
+        //}
 
 
         private void BalanceGradients(int layerIndex)
@@ -387,39 +373,39 @@ namespace ConvNetSharp.SNet
 
 
         //made obsolete by BalanceGradients()
-        private void BalanceParameters()
-        {
-            Func<T, T, T> avg = (x, y) => Ops<T>.Divide(Ops<T>.Add(x, y), Ops<T>.Cast(2.0));
-            //Func<T, T> copy = x => x;
+        //private void BalanceParameters()
+        //{
+        //    Func<T, T, T> avg = (x, y) => Ops<T>.Divide(Ops<T>.Add(x, y), Ops<T>.Cast(2.0));
+        //    //Func<T, T> copy = x => x;
 
 
 
-            //Func<T, T, T> verify = (x, y) => Ops<T>.Equals(x, y) ? x : throw new Exception("The Siamese Net is invalid.");
+        //    //Func<T, T, T> verify = (x, y) => Ops<T>.Equals(x, y) ? x : throw new Exception("The Siamese Net is invalid.");
 
 
 
-            for (int i = 0; i < this.Layers.Count; i++)
-            {
-                var layerParams = this.Layers[i].GetParametersAndGradients();
-                var layerTwinParams = this.LayersTwin[i].GetParametersAndGradients();
+        //    for (int i = 0; i < this.Layers.Count; i++)
+        //    {
+        //        var layerParams = this.Layers[i].GetParametersAndGradients();
+        //        var layerTwinParams = this.LayersTwin[i].GetParametersAndGradients();
 
-                for (int j = 0; j < layerParams.Count; j++)
-                {
-                    //Average Volume.
-                    Volume<T> average = BuilderInstance<T>.Volume.SameAs(layerParams[j].Volume.Shape);
-                    layerParams[j].Volume.Storage.Map(avg, layerTwinParams[j].Volume.Storage, average.Storage);
-                    layerParams[j].Volume.Storage.CopyFrom(average.Storage);
-                    layerTwinParams[j].Volume.Storage.CopyFrom(average.Storage);
-                    //Average Gradient.
-                    average = BuilderInstance<T>.Volume.SameAs(layerParams[j].Gradient.Shape);
-                    layerParams[j].Gradient.Storage.Map(avg, layerTwinParams[j].Volume.Storage, average.Storage);
-                    layerParams[j].Gradient.Storage.CopyFrom(average.Storage);
-                    layerTwinParams[j].Gradient.Storage.CopyFrom(average.Storage);
-                }
+        //        for (int j = 0; j < layerParams.Count; j++)
+        //        {
+        //            //Average Volume.
+        //            Volume<T> average = BuilderInstance<T>.Volume.SameAs(layerParams[j].Volume.Shape);
+        //            layerParams[j].Volume.Storage.Map(avg, layerTwinParams[j].Volume.Storage, average.Storage);
+        //            layerParams[j].Volume.Storage.CopyFrom(average.Storage);
+        //            layerTwinParams[j].Volume.Storage.CopyFrom(average.Storage);
+        //            //Average Gradient.
+        //            average = BuilderInstance<T>.Volume.SameAs(layerParams[j].Gradient.Shape);
+        //            layerParams[j].Gradient.Storage.Map(avg, layerTwinParams[j].Volume.Storage, average.Storage);
+        //            layerParams[j].Gradient.Storage.CopyFrom(average.Storage);
+        //            layerTwinParams[j].Gradient.Storage.CopyFrom(average.Storage);
+        //        }
 
-            }
+        //    }
 
-        }
+        //}
 
 
         public void AddLayer(LayerBase<T> layer)
@@ -691,6 +677,8 @@ namespace ConvNetSharp.SNet
             throw new NotImplementedException();
         }
 
+
+        //Used for accuracy measurement.
         public int[] GetPrediction()
         {
 
@@ -706,11 +694,11 @@ namespace ConvNetSharp.SNet
             var sigmoid = lastLayer as SigmoidLayer<T>;
             if (sigmoid != null)
             {
-                matchTarget = Ops<T>.Cast(0.5);
+                matchTarget = Ops<T>.Cast(1.0);
                 matchThreshold = Ops<T>.Cast(0.2);
             }
 
-            var joinlayer = lastLayer as ILastLayer<T>;
+            var joinlayer = lastLayer as IJoinLayer;
             if (joinlayer != null)
             {
                 matchTarget = Ops<T>.Zero;
@@ -733,7 +721,6 @@ namespace ConvNetSharp.SNet
             }
 
             return predictions;
-
         }
 
         
@@ -788,6 +775,8 @@ namespace ConvNetSharp.SNet
             return dico;
         }
 
+
+        //SVolume utility function.
         public static Volume<T> JoinVolumes(Volume<T> v, Volume<T> v2)
         {
             if (!v.Shape.Equals(v2.Shape)) throw new Exception("Volumes to join must have the same shape.");
@@ -815,6 +804,7 @@ namespace ConvNetSharp.SNet
             return BuilderInstance<T>.Volume.SameAs(data, new Shape(dim));
         }
 
+        //SVolume utility function.
         public static void SplitVolumes(Volume<T> source, out Volume<T> split1, out Volume<T> split2)
         {
             var dim = source.Shape.Dimensions.ToArray();

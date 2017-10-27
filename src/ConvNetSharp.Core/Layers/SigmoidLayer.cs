@@ -65,7 +65,7 @@ namespace ConvNetSharp.Core.Layers
                     }
                 }
             }
-
+            loss = Ops<T>.Negate(loss);
 
         }
 

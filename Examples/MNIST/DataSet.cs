@@ -13,6 +13,8 @@ namespace ATTFace
         private int _start;
         private int _epochCompleted;
 
+        public int Epoch { get { return _epochCompleted; } }
+
         public DataSet(List<ATTEntry> trainImages)
         {
             this._trainImages = trainImages;
@@ -155,9 +157,9 @@ namespace ATTFace
                 }
 
                 //Store expected output.
-                var compare = 1.0;
+                var compare = 0.0;
                 if (labels[i * 2] == labels[i * 2 + 1])
-                    compare = 0.5;
+                    compare = 1.0;
                 expected[i] = compare;
 
                 //expected output is dim: [1, 1, 1, batchSize]. Either 1.0(no match), or 0.5 (match)

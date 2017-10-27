@@ -60,38 +60,60 @@ namespace ATTFace
             this._snet.AddLayer(new FullyConnLayer(100));                           //23 x  28 x 16 x 20
             this._snet.AddLayer(new SigmoidLayer());
 
-            this._snet.AddDistanceLayer(new TwinJoinLayer()); //Closer to 0 the better.
-            this._snet.AddDistanceLayer(new SigmoidLayer());  //Closer to 0.5 the better. 
+            this._snet.AddDistanceLayer(new TwinJoinLayer());
+            this._snet.AddDistanceLayer(new SigmoidLayer());
 
             this._trainer = new SgdTrainer<double>(this._snet)
             {
-                LearningRate = 0.1,
+                LearningRate = 0.05,
                 BatchSize = 20,
-                L2Decay = 0.01,
-                Momentum = 0.9
+                //L2Decay = 0.01,
+                //Momentum = 0.9
             };
 
-            // Do learning
-            Console.WriteLine("Convolutional neural network learning...[Press any key to stop]");
-            do
+            // Program Loop
+            while (true)
             {
-                var trainSample = datasets.Train.NextBatch(this._trainer.BatchSize);
-                Train(trainSample.Item1, trainSample.Item2, trainSample.Item3);
+                // Do learning
+                Console.WriteLine("Convolutional neural network learning...[Press any key to test net]");
+                do
+                {
+                    var trainSample = datasets.Train.NextBatch(this._trainer.BatchSize);
+                    Train(trainSample.Item1, trainSample.Item2, trainSample.Item3);
 
-                //var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
-                //Test(testsample.Item1, testsample.Item3, this._validAccWindow);
+                    //var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
+                    //Test(testsample.Item1, testsample.Item3, this._validAccWindow);
 
-                this._lossWindow.Add(this._trainer.Loss);
+                    this._lossWindow.Add(this._trainer.Loss);
+
+                    Console.WriteLine("Loss: {0} Train accuracy: {1}%", this._trainer.Loss,
+                        Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
+
+                    Console.WriteLine("Pairs seen: {0} Fwd: {1}ms Bckw: {2}ms", this._stepCount / 2,
+                        Math.Round(this._trainer.ForwardTimeMs, 2),
+                        Math.Round(this._trainer.BackwardTimeMs, 2));
+                } while (!Console.KeyAvailable);
+
+                // Do Testing
+                // Run on accWindow / batchSize batches.
+                Console.WriteLine("Testing current network.");
+
+                for (int i = 0; i < 5; i++)
+                {
+                    var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
+                    Test(testsample.Item1, testsample.Item3, this._validAccWindow);
+                }
 
                 Console.WriteLine("Loss: {0} Train accuracy: {1}%", this._trainer.Loss,
-                    Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
-                    //Math.Round(this._validAccWindow.Items.Average() * 100.0, 2));
+                    Math.Round(this._validAccWindow.Items.Average() * 100.0, 2));
 
-                Console.WriteLine("Pairs seen: {0} Fwd: {1}ms Bckw: {2}ms", this._stepCount / 2,
+                Console.WriteLine("Fwd: {0}ms Bckw: {1}ms",
                     Math.Round(this._trainer.ForwardTimeMs, 2),
                     Math.Round(this._trainer.BackwardTimeMs, 2));
-            } while (!Console.KeyAvailable);
 
+                while (Console.KeyAvailable)
+                    Console.ReadKey(true);
+            }
         }
 
 
