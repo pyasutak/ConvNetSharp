@@ -71,8 +71,9 @@ namespace ConvNetSharp.SNet.Layers
                     throw new ArgumentException("Invalid input!");
 #endif
 
-
+            //!!!!!!!!!!!!!!!!!!!!!!!!
             //Need to split the input.
+            //!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
@@ -108,7 +109,7 @@ namespace ConvNetSharp.SNet.Layers
             //return this.OutputActivation;
         }
 
-        //Should probably rename this method to distinguish between the Layer dofoward and the IJoinLayer doForward.
+        //Should probably rename this method to distinguish between the Layer dofoward and the IJoinLayer doForward. Maybe DoJoin
         public virtual Volume<double> DoForward(bool isTraining = false, params Volume<double>[] inputs)
         {
 #if DEBUG
@@ -192,7 +193,7 @@ namespace ConvNetSharp.SNet.Layers
                     Volume = this.Alpha,
                     Gradient = this.AlphaGradients,
                     L1DecayMul = Ops<double>.Zero,
-                    L2DecayMul = Ops<double>.Zero
+                    L2DecayMul = Ops<double>.One
                 }
             };
 

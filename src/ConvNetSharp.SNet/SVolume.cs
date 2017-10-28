@@ -110,9 +110,9 @@ namespace ConvNetSharp.SNet
              */
             int batchSize = this.Shape.GetDimension(3);
 
-            int inputWidth = this.Shape.GetDimension(0);
-            int inputHeight = this.Shape.GetDimension(1);
-            int inputDepth = this.Shape.GetDimension(2);
+            int inputWidth = this.Shape.GetDimension(0); //always 1
+            int inputHeight = this.Shape.GetDimension(1); //always 1
+            int inputDepth = this.Shape.GetDimension(2); //input count = this.InputWidth * this.InputHeight * this.InputDepth;
 
             //Could link to output dimensions... but currently not needed.
 
@@ -138,18 +138,18 @@ namespace ConvNetSharp.SNet
 
                             double aval, xval, yval;
 
-                            //if (x - y == 0)
-                            //{
-                            //    xval = 0;
-                            //    yval = 0;
-                            //    aval = 0;
-                            //}
-                            //else
-                            //{
-                            xval = (a * ((x - y) / Math.Abs(x - y))) * ChainGradient;
-                            yval = (a * (-(x - y) / Math.Abs(x - y))) * ChainGradient;
-                            aval = (Math.Abs(x - y)) * ChainGradient;
-                            //}
+                            if (x - y == 0) //Prevents the same image from breaking the snet.
+                            {
+                                xval = 0;
+                                yval = 0;
+                                aval = 0;
+                            }
+                            else
+                            {
+                                xval = (a * ((x - y) / Math.Abs(x - y))) * ChainGradient;
+                                yval = (a * (-(x - y) / Math.Abs(x - y))) * ChainGradient;
+                                aval = (Math.Abs(x - y)) * ChainGradient;
+                            }
 
                             inputGradients.Set(width, height, depth, n,
                                 inputGradients.Get(width, height, depth, n) + xval);
