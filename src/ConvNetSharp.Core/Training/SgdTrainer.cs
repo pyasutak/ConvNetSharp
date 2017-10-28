@@ -114,7 +114,8 @@ namespace ConvNetSharp.Core.Training
                 if (isMomentumGreaterThanZero)
                 {
                     // sgd with momentum update
-                    velocity.DoMultiply(velocity, this.Momentum);    // step
+                    velocity.DoMultiply(velocity, this.Momentum);    // step //Maybe move step to outside of the for loop... 
+                                                                             //This would prevent a different velocity to be applied to the twin network layers.
                     velocity.DoAdd(delta, velocity);
                     velocity.DoSubtractFrom(parameters, parameters); // apply corrected gradient
                 }
