@@ -193,7 +193,7 @@ namespace ConvNetSharp.SNet.Layers
                     Volume = this.Alpha,
                     Gradient = this.AlphaGradients,
                     L1DecayMul = Ops<double>.Zero,
-                    L2DecayMul = Ops<double>.One
+                    L2DecayMul = Ops<double>.Zero
                 }
             };
 
