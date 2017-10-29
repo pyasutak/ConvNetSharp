@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using ConvNetSharp.Core;
 using ConvNetSharp.Core.Layers.Double;
 using ConvNetSharp.Core.Training;
 using ConvNetSharp.Volume.Double;
@@ -13,11 +12,9 @@ namespace ATTFace
 {
     internal class Program
     {
-
-
         private readonly CircularBuffer<double> _validAccWindow = new CircularBuffer<double>(100);
         private readonly CircularBuffer<double> _trainAccWindow = new CircularBuffer<double>(100);
-        private readonly CircularBuffer<double> _lossWindow = new CircularBuffer<double>(100);
+        private readonly CircularBuffer<double> _lossWindow = new CircularBuffer<double>(100); //Unused.
         private SNet<double> _snet;
         private int _stepCount;
         private SgdTrainer<double> _trainer;
@@ -27,20 +24,10 @@ namespace ATTFace
         private static void Main()
         {
             var program = new Program();
-            program.MnistDemo();
-
-            /**
-             * TODO:
-             * modify _net to _snet
-             * Modify DataSets.cs to give correct input for snets.
-             * update this.train() for double input
-             * update accuracy measurement in this.test()
-             * 
-             */
-
+            program.ATTDemo();
         }
 
-        private void MnistDemo()
+        private void ATTDemo()
         {
             this.datasets = new DataSets();
             if (!datasets.Load(100))
@@ -67,7 +54,7 @@ namespace ATTFace
             {
                 LearningRate = 0.05,
                 BatchSize = 20,
-                //L2Decay = 0.01,
+                L2Decay = 0.01,
                 //Momentum = 0.9
             };
 
@@ -143,17 +130,12 @@ namespace ATTFace
                     (labels[i * 2] == labels[i * 2 + 1] ? 1.0 : 0.0)
                     == predictions[i]
                     ? 1.0 : 0.0);
-
-                //why? why not? ;O
-                //                          Are the labels the same?            Does Prediction match result?
             }
-
-
-
+            
 
             //Show image toggle
             bool displayImages = false;
-
+            
 
             if (!displayImages) return;
             //if (this._stepCount < 2000) return;
@@ -175,25 +157,12 @@ namespace ATTFace
 
         }
 
-
-        
+        // Helper Function.
         private List<Bitmap> VolumeToBitmap(Volume v, int width, int height)
         {
             List<Bitmap> bmps = new List<Bitmap>();
-
-            ////Copy image into Volume.
-            //var j = 0;
-            //for (var y = 0; y < h; y++)
-            //{
-            //    for (var x = 0; x < w; x++)
-            //    {
-            //        dataVolume.Set(x, y, 0, i, entry.Image[j] / 255.0);
-            //        dataVolume2.Set(x, y, 0, i, entry2.Image[j++] / 255.0);
-            //    }
-            //}
-
+            
             int batchSize = v.Shape.Dimensions[3];
-
             for (int n = 0; n < batchSize; n++)
             {
                 Bitmap bmp = new Bitmap(width, height);
@@ -209,7 +178,6 @@ namespace ATTFace
             }
 
             return bmps;
-
         }
 
 

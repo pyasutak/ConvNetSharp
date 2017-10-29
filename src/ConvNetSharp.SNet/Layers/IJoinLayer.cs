@@ -9,6 +9,6 @@ namespace ConvNetSharp.SNet.Layers
     {
         int JoinCount { get; }
 
-        Volume<double> DoForward(bool isTraining = false, params Volume<double>[] inputs);
+        Volume<double> DoJoin(bool isTraining = false, params Volume<double>[] inputs);
     }
 }

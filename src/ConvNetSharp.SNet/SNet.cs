@@ -9,21 +9,6 @@ namespace ConvNetSharp.SNet
 {
     public class SNet<T> : INet<T> where T : struct, IEquatable<T>, IFormattable
     {
-
-        /**
-         * Things to do:
-         * 
-         * Go over IsTwinValid(); done?
-         * Go over Balance Gradients(); replaced for BalanceParameters()
-         * Backward() is not implementing loss (through ILastLayer)
-         * GetCostLoss(), getPrediction(), dump() not implemented.
-         * FromData() and constructor through dic not customized.
-         * 
-         * 
-         * 
-         * 
-         */
-
         public List<LayerBase<T>> Layers { get; } = new List<LayerBase<T>>();
         public List<LayerBase<T>> LayersTwin { get; } = new List<LayerBase<T>>();
 
@@ -32,13 +17,8 @@ namespace ConvNetSharp.SNet
 
         public Volume<T> Forward(Volume<T> input, bool isTraining = false)
         {
-            //Assume the two inputs are given as a single Volume.
-            //First, split the input, then call forward(input,input2);
             SplitVolumes(input, out Volume<T> split1, out Volume<T> split2);
-
             return this.Forward(split1, split2, isTraining);
-
-            //return Forward(input, input, isTraining);
         }
 
         public Volume<T> Forward(Volume<T>[] input, bool isTraining = false)
@@ -48,27 +28,18 @@ namespace ConvNetSharp.SNet
 
         public Volume<T> Forward(Volume<T> inputA, Volume<T> inputB, bool isTraining = false)
         {
-            //If isTraining is true, check to make sure parameters are updated.
-            //Doesn't quite work... Needs to be called one more time after training. Possibly better solution.
-            //if (isTraining)
-            //{
             //try
             //{
-            //    //Obsolete now?
             //    ValidateTwin();
             //}
             //catch
             //{
             //    BalanceParameters();
-            //    //Test
-            //    //ValidateTwin();
-            //}
             //}
 
             var activationA = this.Layers[0].DoForward(inputA, isTraining);
             var activationB = this.LayersTwin[0].DoForward(inputB, isTraining);
-
-
+            
             for (var i = 1; i < this.Layers.Count; i++)
             {
                 var layer = this.Layers[i];
@@ -78,13 +49,12 @@ namespace ConvNetSharp.SNet
             }
 
             //Use activationA and activataionB for the distance layer.
-
             var joinLayer = this.DistanceLayers[0] as IJoinLayer;
             if (joinLayer == null) throw new Exception("The first layer of the distance layer must join the networks.");
             var outA = activationA as Volume<double>;
             var outB = activationB as Volume<double>;
 
-            var distance = joinLayer.DoForward(isTraining, outA, outB) as Volume<T>; //Urgh, the generics....
+            var distance = joinLayer.DoJoin(isTraining, outA, outB) as Volume<T>; //Urgh, the generics....
 
             for (var i = 1; i < this.DistanceLayers.Count; i++)
             {
@@ -93,8 +63,6 @@ namespace ConvNetSharp.SNet
             }
 
             return distance;
-
-
         }
 
         public T Backward(Volume<T> y)
@@ -106,31 +74,22 @@ namespace ConvNetSharp.SNet
             var lastDistanceLayer = this.DistanceLayers[dn - 1] as ILastLayer<T>;
             if (lastLayer != null && lastLayerTwin != null)
             {
-                //TODO: I cut out implementation for loss. Requires ILastLayer interface. done, see below
-                //Or it would... if the ILastLayer interface did anything. Loss is now implemented in this method.
-
-
-                //whattehfux does this code do?:
-
-                //for (int i = 0; i < expectedOutput.Shape.Dimensions[3]; i++)
-                //    if (Ops<T>.GreaterThan(expectedOutput.Get(0, 0, 0, i), Ops<T>.Zero))
-                //        break;
-                
                 T loss;
 
+                // Calculate Gradients for Distance Layer
                 lastDistanceLayer.Backward(y, out loss);
                 for (int i = dn - 2; i >= 0; i--)
                 {
                     this.DistanceLayers[i].Backward(this.DistanceLayers[i + 1].InputActivationGradients);
                 }
-
-                //Might want to add some checks here......
-                //split SVolume into two Volumes for standard processing.
+                
+                // Split SVolume into two Volumes for standard processing in the Twin Layers.
                 var distanceLayerTwinGradients = (this.DistanceLayers[0] as TwinJoinLayer).InputTwinActivationGradients as Volume<T>;
 
+                // Calculate Gradients for Twin Layers
                 lastLayer.Backward(this.DistanceLayers[0].InputActivationGradients);
                 lastLayerTwin.Backward(distanceLayerTwinGradients);
-                this.BalanceGradients(n - 1);
+                this.BalanceGradients(n - 1); //Balance Gradients so twin layers parameters remain the same.
                 for (int i = n - 2; i >= 0; i--)
                 {
                     // first layer assumed input 
@@ -165,9 +124,7 @@ namespace ConvNetSharp.SNet
                 //    }
                 //}
                 //loss = Ops<T>.Negate(loss);
-
-
-
+                
                 ////Contrastive Loss
                 //var euclideanDistance = this.DistanceLayers[0].OutputActivation.Storage.Get(0);
                 //T m = Ops<T>.Cast(1.0);
@@ -201,68 +158,23 @@ namespace ConvNetSharp.SNet
                 //    }
                 //}
  
-                
 
                 return loss;
             }
 
             throw new Exception("The SNet is empty!");
         }
-
-        //UPDATE
-
+        
         //Currently unused. Required for testing.
         //public void ValidateTwin()
         //{
-        //    /**
-        //     * Constant values for LayerBase:
-        //     * InputActivation
-        //     * OutputActivation
-        //     * InputActivationGradients
-        //     * OutputActivationGradients
-        //     * Input/Output Height/Width/Depth
-        //     * 
-        //     * 
-        //     * 
-        //     * The thing to check is Parameters and Gradients, Foolish past self.
-        //     * Do I really need to check all of the minor class variables for each layer?
-        //     *  They are not changed once initialized... but it might be important to check each layer for consistency...???
-        //     * 
-        //     * 
-        //     * 
-        //     */
-
-
-
-
-
-
         //    Func<T, T, T> verify = (x, y) => Ops<T>.Equals(x, y) ? x : throw new Exception("The Siamese Net is invalid.");
 
         //    for (int i = 0; i < Layers.Count; i++)
         //    {
         //        var l = Layers[i];
         //        var lt = LayersTwin[i];
-
-
-
-        //        //Really want to check these????
-        //        //var inGradientsVerification = BuilderInstance<T>.Volume.SameAs(l.InputActivationGradients.Shape).Storage;
-        //        //l.InputActivationGradients.Storage.Map(verify, lt.InputActivationGradients.Storage, inGradientsVerification);
-        //        //var outGradientsVerification = BuilderInstance<T>.Volume.SameAs(l.OutputActivationGradients.Shape).Storage;
-        //        //l.OutputActivationGradients.Storage.Map(verify, lt.OutputActivationGradients.Storage, outGradientsVerification);
-
-        //        /*
-        //         * convlayer
-        //         * fullyconnlayer
-        //         *  :Filter, Bias
-        //         *  
-        //         * PoolLayer
-        //         *  :Width, Height, Stride, Pad
-        //         * 
-        //         * 
-        //         */
-
+        
         //        var convl = l as ConvLayer<T>;
         //        if (convl != null)
         //        {
@@ -305,7 +217,6 @@ namespace ConvNetSharp.SNet
 
         private void BalanceGradients(int layerIndex)
         {
-            
             //updated now to use GetParametersAndGradients. Works as intended.
 
             var pandg = Layers[layerIndex].GetParametersAndGradients();
@@ -313,21 +224,10 @@ namespace ConvNetSharp.SNet
 
             for (int i = 0; i < pandg.Count; i++)
             {
-
-
-                //}
                 var gradient = pandg[i].Gradient;
                 var gradientT = pandgT[i].Gradient;
                 var temp = gradient.Clone();
-
-                //Verify dimensions??? Why even bother at this point?
-
-                //var width = gradient.Shape.GetDimension(0);
-                //var height = gradient.Shape.GetDimension(1);
-                //var depth = gradient.Shape.GetDimension(2);
-                //var batch = gradient.Shape.GetDimension(3);
-
-
+                
                 //var avg = BuilderInstance<T>.Volume.SameAs(gradient.Shape);
                 //gradient.Storage.Map((x, y) => Ops<T>.Divide(Ops<T>.Add(x, y), Ops<T>.Cast(2)), gradientT.Storage, avg.Storage);
 
@@ -337,38 +237,7 @@ namespace ConvNetSharp.SNet
                 //gradient.DoMultiply(gradient, Ops<T>.Cast(0.5)); //Additive instead of average
                 gradientT.DoAdd(temp, gradientT);
                 //gradientT.DoMultiply(gradientT, Ops<T>.Cast(0.5));
-
-                //this does nothing. lel. The only gradients that are trained upon are those passed in GetParametersAndGradients()
-                //better now. wew
-
             }
-
-            
-            //RETHINK THIS PROCESS...
-            /*
-             * 
-             * 
-             * 
-             * Rebalancing the gradients at every level makes the entire point of the siamese network irrelevant.
-             * Rebalance gradients at the end of the backward.
-             * What needs to be rebalanced? EVERYTHING???
-             * Everything that needs to be verified.
-             * I.E. everything that backwards() can change.
-             * 
-             * Could use:
-             * GetParametersAndGradients()
-             * to balance the layers.
-             * Ultimately, the actual values in the layers are in the parameters and gradients.
-             * 
-             * However... The training algorithm updates the layers based upon the inputactivationgradients... so those should be used.
-             * As long as the training algorithm sees that the twin layers have the same inputActivationGradients, they should be 
-             *  updated to the same values.
-             *  
-             *  Basically, leave as is?
-             */
-
-
-
         }
 
 
@@ -377,13 +246,9 @@ namespace ConvNetSharp.SNet
         //{
         //    Func<T, T, T> avg = (x, y) => Ops<T>.Divide(Ops<T>.Add(x, y), Ops<T>.Cast(2.0));
         //    //Func<T, T> copy = x => x;
-
-
-
+        
         //    //Func<T, T, T> verify = (x, y) => Ops<T>.Equals(x, y) ? x : throw new Exception("The Siamese Net is invalid.");
-
-
-
+        
         //    for (int i = 0; i < this.Layers.Count; i++)
         //    {
         //        var layerParams = this.Layers[i].GetParametersAndGradients();
@@ -458,10 +323,6 @@ namespace ConvNetSharp.SNet
                     twinDotProductLayer.BiasPref = dotProductLayer.BiasPref;
                     //Both ConvLayer and FullyConnLayer have filters that are updated by this. Copy over to twin.
 
-                    //Apparntly the below code breaks the program... 
-                    //I think having the filters be the same results in too many distances of x-y = 0... which is a 
-                    //divide by 0 issue in my math in SVolume.
-
                     if (this.Layers[this.Layers.Count - 1] is ConvLayer<T> l && this.LayersTwin[this.Layers.Count - 1] is ConvLayer<T> lt)
                     {
                         lt.Filters.Storage.Map(((x, y) => y), l.Filters.Storage, lt.Filters.Storage);
@@ -473,14 +334,12 @@ namespace ConvNetSharp.SNet
                 }
             }
 
-            //var layertwin = LayerBase<T>.FromData(layer.GetData()); //Not good enough!!!!
-
             if (this.Layers.Count > 0)
             {
                 layer.Init(inputWidth, inputHeight, inputDepth);
             }
 
-            //var layertwin = CloneLayer(layer);
+            //Clone the layer.
             var layertwin = LayerBase<T>.FromData(layer.GetData());
 
             this.Layers.Add(layer);
@@ -488,7 +347,7 @@ namespace ConvNetSharp.SNet
         }
 
         //Should only be used after finished adding normal net layers.
-        public void AddDistanceLayer(LayerBase<T> layer)
+        public void AddDistanceLayer(LayerBase<T> dlayer)
         {
             int inputWidth = 0, inputHeight = 0, inputDepth = 0;
             LayerBase<T> lastLayer = null;
@@ -500,7 +359,7 @@ namespace ConvNetSharp.SNet
                 inputDepth = this.DistanceLayers[this.DistanceLayers.Count - 1].OutputDepth;
                 lastLayer = this.DistanceLayers[this.DistanceLayers.Count - 1];
             }
-            else if (!(layer is IJoinLayer))
+            else if (!(dlayer is IJoinLayer))
             {
                 throw new ArgumentException("First distance layer should be a Join Layer");
             }
@@ -511,148 +370,13 @@ namespace ConvNetSharp.SNet
                 inputDepth = this.Layers[this.Layers.Count - 1].OutputDepth;
                 lastLayer = this.Layers[this.Layers.Count - 1];
             }
+            
+            dlayer.Init(inputWidth, inputHeight, inputDepth);
 
-            //This can change. The distance layer will be receiving input.
-            layer.Init(inputWidth, inputHeight, inputDepth);
-
-            this.DistanceLayers.Add(layer);
+            this.DistanceLayers.Add(dlayer);
         }
-
-
-
-        //Obsolete.
         
-        ////To be removed:
-        //private static LayerBase<T> CloneLayer(LayerBase<T> source)
-        //{
-
-        //    //var layers = dico["Layers"] as IEnumerable<IDictionary<string, object>>;
-        //    //foreach (var layerData in layers)
-        //    //{
-        //    //    var layer = LayerBase<T>.FromData(layerData);
-        //    //    net.Layers.Add(layer);
-        //    //}
-
-        //    //Copies all class properties that are init when created. Copies all parameters and gradients.
-
-
-        //    var conv = source as ConvLayer<T>;
-        //    if (conv != null)
-        //    {
-        //        conv.GetData();
-        //        var clone = new ConvLayer<T>(conv.Width, conv.Height, conv.FilterCount);
-        //        clone.BiasPref = conv.BiasPref;
-
-        //        //copy parameters and gradients
-        //        //var pg = source.GetParametersAndGradients();
-        //        //var clonepg = clone.GetParametersAndGradients();
-
-        //        //for (int i = 0; i < pg.Count; i++)
-        //        //{
-        //        //    clonepg[i].Volume = BuilderInstance<T>.Volume.SameAs(pg[i].Volume.Storage, pg[i].Volume.Shape);
-        //        //    clonepg[i].Gradient = BuilderInstance<T>.Volume.SameAs(pg[i].Gradient.Storage, pg[i].Gradient.Shape);
-        //        //    clonepg[i].L1DecayMul = pg[i].L1DecayMul;
-        //        //    clonepg[i].L2DecayMul = pg[i].L2DecayMul;
-        //        //}
-
-        //        //Volume = this.Filters,
-        //        //    Gradient = this.FiltersGradient,
-        //        //    L2DecayMul = this.L2DecayMul,
-        //        //    L1DecayMul = this.L1DecayMul
-        //        //},
-        //        //new ParametersAndGradients<T>
-        //        //{
-        //        //    Volume = this.Bias,
-        //        //    Gradient = this.BiasGradient,
-        //        //    L1DecayMul = Ops<T>.Zero,
-        //        //    L2DecayMul = Ops<T>.Zero
-
-        //        //Initialize all properties.
-        //        clone.Init(conv.InputWidth, conv.InputHeight, conv.InputDepth);
-
-        //        //Copy all randomized properties.
-        //        clone.Filters.Storage.Map(((x,y) => y), conv.Filters.Storage, clone.Filters.Storage);
-
-
-        //        return clone;
-        //    }
-
-        //    var fullConn = source as FullyConnLayer<T>;
-        //    if (fullConn != null)
-        //    {
-        //        fullConn.GetData();
-        //        var clone = new FullyConnLayer<T>(fullConn.NeuronCount);
-
-        //        //copy parameters and gradients
-        //        //var pg = source.GetParametersAndGradients();
-        //        //var clonepg = clone.GetParametersAndGradients();
-
-        //        //for (int i = 0; i < pg.Count; i++)
-        //        //{
-        //        //    clonepg[i].Volume = BuilderInstance<T>.Volume.SameAs(pg[i].Volume.Storage, pg[i].Volume.Shape);
-        //        //    clonepg[i].Gradient = BuilderInstance<T>.Volume.SameAs(pg[i].Gradient.Storage, pg[i].Gradient.Shape);
-        //        //    clonepg[i].L1DecayMul = pg[i].L1DecayMul;
-        //        //    clonepg[i].L2DecayMul = pg[i].L2DecayMul;
-        //        //}
-
-        //        //Initialize all properties.
-        //        clone.Init(fullConn.InputWidth, fullConn.InputHeight, fullConn.InputDepth);
-
-        //        //Copy all randomized properties.
-        //        clone.Filters.Storage.Map(((x, y) => y), fullConn.Filters.Storage, clone.Filters.Storage);
-
-        //        return clone;
-        //    }
-
-        //    var input = source as InputLayer<T>;
-        //    if (input != null)
-        //        return LayerBase<T>.FromData(input.GetData());
-        //    //var layertwin = LayerBase<T>.FromData(layer.GetData()); //Not good enough!!!!
-
-        //    var pool = source as PoolLayer<T>;
-        //    if (pool != null)
-        //    {
-        //        var clone = new PoolLayer<T>(pool.Width, pool.Height);
-
-        //        ////copy parameters and gradients
-        //        //var pg = source.GetParametersAndGradients();
-        //        //var clonepg = clone.GetParametersAndGradients();
-
-        //        //for (int i = 0; i < pg.Count; i++)
-        //        //{
-        //        //    clonepg[i].Volume = BuilderInstance<T>.Volume.SameAs(pg[i].Volume.Storage, pg[i].Volume.Shape);
-        //        //    clonepg[i].Gradient = BuilderInstance<T>.Volume.SameAs(pg[i].Gradient.Storage, pg[i].Gradient.Shape);
-        //        //    clonepg[i].L1DecayMul = pg[i].L1DecayMul;
-        //        //    clonepg[i].L2DecayMul = pg[i].L2DecayMul;
-        //        //}
-        //        return clone;
-        //    }
-
-        //    var relu = source as ReluLayer<T>;
-        //    if (relu != null)
-        //        return LayerBase<T>.FromData(relu.GetData());
-        //    //Probably not sufficient. Needs init() to be called. OR NOT????
-
-        //    var sigm = source as SigmoidLayer<T>;
-        //    if (sigm != null)
-        //        return LayerBase<T>.FromData(sigm.GetData());
-
-        //    var softmax = source as SoftmaxLayer<T>;
-        //    if (softmax != null)
-        //    {
-        //        var clone = new SoftmaxLayer<T>(softmax.ClassCount);
-
-        //        return clone;
-        //    }
-
-        //    var tanh = source as SigmoidLayer<T>;
-        //    if (tanh != null)
-        //        return LayerBase<T>.FromData(tanh.GetData());
-
-        //    throw new Exception($"Copying for {source.GetType().FullName} is not implemented.");
-        //}
-
-
+        //Used to get references to trainable values (weights and other parameters) and the gradients to change them.
         public List<ParametersAndGradients<T>> GetParametersAndGradients()
         {
             var response = new List<ParametersAndGradients<T>>();
@@ -672,16 +396,25 @@ namespace ConvNetSharp.SNet
             return response;
         }
 
+        //Used for testing? Copied direct from Core.Net
         public T GetCostLoss(Volume<T> input, Volume<T> y)
         {
-            throw new NotImplementedException();
+            Forward(input);
+
+            var lastLayer = this.Layers[this.Layers.Count - 1] as ILastLayer<T>;
+            if (lastLayer != null)
+            {
+                T loss;
+                lastLayer.Backward(y, out loss);
+                return loss;
+            }
+
+            throw new Exception("Last layer doesn't implement ILastLayer interface");
         }
-
-
+        
         //Used for accuracy measurement.
         public int[] GetPrediction()
         {
-
             //Returns forward output for accuracy measurement.
             var lastLayer = DistanceLayers[DistanceLayers.Count - 1];
             var output = lastLayer.OutputActivation.ToArray();
@@ -723,14 +456,13 @@ namespace ConvNetSharp.SNet
             return predictions;
         }
 
-        
-
+        //Save net data to a text file... I believe it was an early testing requirement...
         public void Dump(string filename)
         {
             //ADD???
         }
 
-        //Edit to fit
+        //Build an SNet from dictionary provided by this.GetData()
         public static SNet<T> FromData(IDictionary<string, object> dico)
         {
             var snet = new SNet<T>();
@@ -754,6 +486,7 @@ namespace ConvNetSharp.SNet
             return snet;
         }
 
+        //Provides all information required to recreate SNet.
         public Dictionary<string, object> GetData()
         {
             var dico = new Dictionary<string, object>();
@@ -774,24 +507,11 @@ namespace ConvNetSharp.SNet
 
             return dico;
         }
-
-
+        
         //SVolume utility function.
         public static Volume<T> JoinVolumes(Volume<T> v, Volume<T> v2)
         {
             if (!v.Shape.Equals(v2.Shape)) throw new Exception("Volumes to join must have the same shape.");
-
-            //Join here is 16x size of v or v2.
-            //Find last dimension, and double over that.
-            //I can just add another dimension.
-            //Check last dimension if == joincount.
-            //split off of that?
-            //Need to find a way to get just a part of the Volume.
-            //Volume.toArray() gives a T[], which can be split.
-            //Can then rebuild the Volumes with BuilderInstance<T>.Volume.SameAs();
-
-            //Or I can just work with the int[] arrays.
-            //Either way, this method is too clunky and not worthwhile...???
 
             var dim = new List<int>(v.Shape.Dimensions.ToArray());
             dim[dim.Count - 1] *= 2;
@@ -808,9 +528,6 @@ namespace ConvNetSharp.SNet
         public static void SplitVolumes(Volume<T> source, out Volume<T> split1, out Volume<T> split2)
         {
             var dim = source.Shape.Dimensions.ToArray();
-            //if (dim[dim.Count - 1] != 2) throw new Exception("Volumes to split must be Joined first.");
-
-            //Does it matter if I split by batchsize?????? NOPE.
             dim[dim.Length - 1] /= 2;
 
             var data = source.ToArray();

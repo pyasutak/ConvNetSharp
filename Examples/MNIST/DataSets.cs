@@ -8,22 +8,10 @@ namespace ATTFace
 {
     internal class DataSets
     {
-        //private const string urlMnist = @"http://yann.lecun.com/exdb/mnist/";
-        //private const string mnistFolder = @"..\Mnist\";
-        //private const string trainingLabelFile = "train-labels-idx1-ubyte.gz";
-        //private const string trainingImageFile = "train-images-idx3-ubyte.gz";
-        //private const string testingLabelFile = "t10k-labels-idx1-ubyte.gz";
-        //private const string testingImageFile = "t10k-images-idx3-ubyte.gz";
-
-
         private const string urlATT = @"http://www.cl.cam.ac.uk/Research/DTG/attarchive/pub/data/att_faces.zip";
         private const string attFolder = @"..\att\";
         private const string attDataSet = "att_faces.zip";
-
-
-
-
-
+        
         public DataSet Train { get; set; }
 
         public DataSet Validation { get; set; }
@@ -51,60 +39,34 @@ namespace ATTFace
         
         public bool Load(int validationSize = 1000) //validationSize is not used.
         {
-            //Directory.CreateDirectory(mnistFolder);
-            
             Directory.CreateDirectory(attFolder);
-
-
-
-
-            //var trainingLabelFilePath = Path.Combine(mnistFolder, trainingLabelFile);
-            //var trainingImageFilePath = Path.Combine(mnistFolder, trainingImageFile);
-            //var testingLabelFilePath = Path.Combine(mnistFolder, testingLabelFile);
-            //var testingImageFilePath = Path.Combine(mnistFolder, testingImageFile);
             
             var attDataSetFilePath = Path.Combine(attFolder, attDataSet);
-
-
-
-            // Download Mnist files if needed
-            //Console.WriteLine("Downloading Mnist training files...");
-            //DownloadFile(urlMnist + trainingLabelFile, trainingLabelFilePath);
-            //DownloadFile(urlMnist + trainingImageFile, trainingImageFilePath);
-            //Console.WriteLine("Downloading Mnist testing files...");
-            //DownloadFile(urlMnist + testingLabelFile, testingLabelFilePath);
-            //DownloadFile(urlMnist + testingImageFile, testingImageFilePath);
             
             // Download data set if needed
             Console.WriteLine("Downloading AT&T Face Data Set files...");
             DownloadFile(urlATT, attDataSetFilePath);
-
             
             // Load data
             Console.WriteLine("Loading the datasets...");
             //var train_images = ATTReader.Load(trainingLabelFilePath, trainingImageFilePath);
             //var testing_images = ATTReader.Load(testingLabelFilePath, testingImageFilePath);
             var load_images = ATTReader.Load(attDataSetFilePath);
-
-
             
             //split each face into validation.
             //Dataset has 40 faces, 10 versions of each.
-            //Take two versions of each face for validation set.
+            //Take three versions of each face for validation set.
             List<ATTEntry> train_images = new List<ATTEntry>();
             List<ATTEntry> valiation_images = new List<ATTEntry>();
 
             for (int i = 0; i < load_images.Count; i++)
             {
-                if (i % 10 < 2)
+                if (i % 10 < 3)
                     valiation_images.Add(load_images[i]);
                 else
                     train_images.Add(load_images[i]);
             }
-
-
-
-
+            
             //train_images = load_images.GetRange(0, load_images.Count - validationSize);
             //valiation_images = load_images.GetRange(load_images.Count - validationSize, validationSize);
 
