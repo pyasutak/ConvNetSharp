@@ -39,13 +39,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvNetSharp.Utils", "src\C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlowDemo", "Examples\FlowDemo\FlowDemo.csproj", "{4DAFB991-F930-4E9C-9E87-CB22F526EE8D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvNetSharp.SNet", "src\ConvNetSharp.SNet\ConvNetSharp.SNet.csproj", "{8B286B2F-2CB4-4F0D-935D-410055C8B8D3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConvNetSharp.SNet", "src\ConvNetSharp.SNet\ConvNetSharp.SNet.csproj", "{8B286B2F-2CB4-4F0D-935D-410055C8B8D3}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SNet_Demos", "SNet_Demos", "{8A368324-E6DD-4E13-84A7-B21CBDC15B32}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinimalSNet", "Examples\MinimalSNet\MinimalSNet.csproj", "{67A99E93-58F8-4961-B8D8-5AA8B593D001}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MNIST", "Examples\MNIST\MNIST.csproj", "{052AEDF5-C6AB-4279-992A-5E370AA2CA6D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ATTFace", "Examples\MNIST\ATTFace.csproj", "{052AEDF5-C6AB-4279-992A-5E370AA2CA6D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

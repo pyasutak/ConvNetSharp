@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using ConvNetSharp.Core;
 using ConvNetSharp.Core.Layers.Double;
 using ConvNetSharp.Core.Training;
 using ConvNetSharp.Volume.Double;
@@ -9,15 +8,13 @@ using ConvNetSharp.SNet.Layers;
 using System.Drawing;
 using System.Collections.Generic;
 
-namespace MNIST
+namespace ATTFace
 {
     internal class Program
     {
-
-
-        private readonly CircularBuffer<double> _testAccWindow = new CircularBuffer<double>(100);
+        private readonly CircularBuffer<double> _validAccWindow = new CircularBuffer<double>(20);
         private readonly CircularBuffer<double> _trainAccWindow = new CircularBuffer<double>(100);
-        private readonly CircularBuffer<double> _lossWindow = new CircularBuffer<double>(100);
+        private readonly CircularBuffer<double> _lossWindow = new CircularBuffer<double>(5);
         private SNet<double> _snet;
         private int _stepCount;
         private SgdTrainer<double> _trainer;
@@ -27,20 +24,10 @@ namespace MNIST
         private static void Main()
         {
             var program = new Program();
-            program.MnistDemo();
-
-            /**
-             * TODO:
-             * modify _net to _snet
-             * Modify DataSets.cs to give correct input for snets.
-             * update this.train() for double input
-             * update accuracy measurement in this.test()
-             * 
-             */
-
+            program.ATTDemo();
         }
 
-        private void MnistDemo()
+        private void ATTDemo()
         {
             this.datasets = new DataSets();
             if (!datasets.Load(100))
@@ -50,48 +37,128 @@ namespace MNIST
 
             // Create network
             this._snet = new SNet<double>();
-            this._snet.AddLayer(new InputLayer(28, 28, 1));
-            this._snet.AddLayer(new ConvLayer(5, 5, 8) { Stride = 1, Pad = 2 });
-            this._snet.AddLayer(new ReluLayer());
-            this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });
-            this._snet.AddLayer(new ConvLayer(5, 5, 16) { Stride = 1, Pad = 2 });
-            this._snet.AddLayer(new ReluLayer());
-            this._snet.AddLayer(new PoolLayer(3, 3) { Stride = 3 });
-            this._snet.AddLayer(new FullyConnLayer(10));
-            //this._snet.AddLayer(new SoftmaxLayer(10));
+            this._snet.AddLayer(new InputLayer(92, 112, 1));                        //input shape:
+            this._snet.AddLayer(new ConvLayer(5, 5, 16) { Stride = 1});             //92 x 112 x  1 x 20
+            this._snet.AddLayer(new ReluLayer());                                   //92 x 112 x  8 x 20
+            this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //92 x 112 x  8 x 20
+            this._snet.AddLayer(new ConvLayer(5, 5, 32) { Stride = 1});             //46 x  56 x  8 x 20
+            this._snet.AddLayer(new ReluLayer());                                   //46 x  56 x 16 x 20
+            this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //46 x  56 x 16 x 20
+            this._snet.AddLayer(new FullyConnLayer(1000));                           //23 x  28 x 16 x 20
+            this._snet.AddLayer(new SigmoidLayer());
 
-            this._snet.AddDistanceLayer(new TwinJoinLayer()); //Closer to 0 the better.
-            this._snet.AddDistanceLayer(new SigmoidLayer()); //Closer to 0.5 the better. 
+            this._snet.AddDistanceLayer(new TwinJoinLayer());
+            this._snet.AddDistanceLayer(new SigmoidLayer());
 
             this._trainer = new SgdTrainer<double>(this._snet)
             {
-                LearningRate = 0.01,
-                BatchSize = 1,
-                L2Decay = 0.005,
+                LearningRate = 0.05,
+                BatchSize = 20,
+                L2Decay = 0.01,
                 //Momentum = 0.9
             };
 
-            Console.WriteLine("Convolutional neural network learning...[Press any key to stop]");
-            do
+            // Program Loop
+            while (true)
             {
-                var trainSample = datasets.Train.NextBatch(this._trainer.BatchSize);
-                Train(trainSample.Item1, trainSample.Item2, trainSample.Item3);
+                // Do learning
+                Console.WriteLine("Convolutional neural network learning...[Press any key to test net]");
+                bool epoch;
+                do
+                {
+                    var trainSample = datasets.Train.NextBatch(this._trainer.BatchSize, out epoch);
+                    Train(trainSample.Item1, trainSample.Item2, trainSample.Item3);
 
-                var testSample = datasets.Test.NextBatch(this._trainer.BatchSize);
-                Test(testSample.Item1, testSample.Item3, this._testAccWindow);
+                    //var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
+                    //Test(testsample.Item1, testsample.Item3, this._validAccWindow);
 
-                this._lossWindow.Add(this._trainer.Loss);
+                    //this._lossWindow.Add(this._trainer.Loss);
 
-                Console.WriteLine("Loss: {0} Train accuracy: {1}% Test accuracy: {2}%", this._trainer.Loss,
-                    Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2),
-                    Math.Round(this._testAccWindow.Items.Average() * 100.0, 2));
+                    Console.WriteLine("Loss: {0} Train accuracy: {1}%", this._trainer.Loss,
+                        Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
 
-                Console.WriteLine("Example seen: {0} Fwd: {1}ms Bckw: {2}ms", this._stepCount,
+                    Console.WriteLine("Pairs seen: {0} Fwd: {1}ms Bckw: {2}ms", this._stepCount / 2,
+                        Math.Round(this._trainer.ForwardTimeMs, 2),
+                        Math.Round(this._trainer.BackwardTimeMs, 2));
+                    //} while (!Console.KeyAvailable);
+                } while (!epoch);
+                Console.WriteLine($"Epoch #{datasets.Train.Epoch}");
+
+                // Do Testing
+                // Run on accWindow / batchSize batches.
+                Console.WriteLine("Testing current network.");
+
+                //for (int i = 0; i < 5; i++)
+                //{
+                var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize, out bool epochThrowaway);
+                Test(testsample.Item1, testsample.Item3, this._validAccWindow);
+                //}
+
+
+                Console.WriteLine("Test: Loss: {0} Train accuracy: {1}%", this._trainer.Loss,
+                    Math.Round(this._validAccWindow.Items.Average() * 100.0, 2));
+
+                Console.WriteLine("Test: Fwd: {0}ms Bckw: {1}ms",
                     Math.Round(this._trainer.ForwardTimeMs, 2),
                     Math.Round(this._trainer.BackwardTimeMs, 2));
-            } while (!Console.KeyAvailable);
 
+                //while (Console.KeyAvailable)
+                //    Console.ReadKey(true);
+
+                //Check Validation Loss for convergence.
+
+                if (this._lossWindow.Count == this._lossWindow.Capacity)
+                {
+                    double threshold = 0.001;
+                    double avg = this._lossWindow.Items.Average();
+                    if (Math.Sqrt(Math.Pow((avg - this._trainer.Loss), 2.0)) < threshold) //Euclidean Distance
+                    {
+
+
+                        break;
+                    }
+                }
+                this._lossWindow.Add(this._trainer.Loss);
+
+                if (this.datasets.Train.Epoch >= 200)
+                    break;
+            }
+            Console.WriteLine("Training is Done.");
+
+            while (true)
+            {
+                // Do learning
+                Console.WriteLine("Run on Validation Set...[Press any key to test net]");
+                do
+                {
+                    var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize, out bool epochThrowaway);
+                    Test(testsample.Item1, testsample.Item3, this._validAccWindow);
+
+                    //var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
+                    //Test(testsample.Item1, testsample.Item3, this._validAccWindow);
+
+                    //this._lossWindow.Add(this._trainer.Loss);
+
+                    Console.WriteLine("Loss: {0} Train accuracy: {1}%", this._trainer.Loss,
+                        Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
+
+                    Console.WriteLine("Fwd: {0}ms Bckw: {1}ms",
+                        Math.Round(this._trainer.ForwardTimeMs, 2),
+                        Math.Round(this._trainer.BackwardTimeMs, 2));
+                } while (!Console.KeyAvailable);
+            }
         }
+
+        private void Train(Volume x, Volume y, int[] labels)
+        {
+            this._trainer.Train(x, y);
+
+            Test(x, labels, this._trainAccWindow, false);
+
+            this._stepCount += labels.Length;
+        }
+
+
 
         private void Test(Volume x, int[] labels, CircularBuffer<double> accuracy, bool forward = true)
         {
@@ -108,39 +175,26 @@ namespace MNIST
                     (labels[i * 2] == labels[i * 2 + 1] ? 1.0 : 0.0)
                     == predictions[i]
                     ? 1.0 : 0.0);
-
-
-
-                //why? why not? ;O
-                //                          Are the labels the same?            Does Prediction match result?
             }
+            
 
+            //Show image toggle
             bool displayImages = false;
+            
+
             if (!displayImages) return;
-            if (this._stepCount < 2000) return;
+            //if (this._stepCount < 2000) return;
 
             SNet<double>.SplitVolumes(x, out ConvNetSharp.Volume.Volume<double> v1, out ConvNetSharp.Volume.Volume<double> v2);
 
-            var numbers = VolumeToBitmap(v1 as Volume, 28, 28);
-            var numbers2 = VolumeToBitmap(v2 as Volume, 28, 28);
+            var numbers = VolumeToBitmap(v1 as Volume, 92, 112);
+            var numbers2 = VolumeToBitmap(v2 as Volume, 92, 112);
 
             var popup = new DisplayImage();
-            //int count = 0;
-            //for (int i = this._stepCount; i < this._stepCount + predictions.Length * 2; i+= 2)
-            //{
-            //    Double res = (labels[count * 2] == labels[count * 2 + 1] ? 1.0 : 0.0) == (double)predictions[count] ? 1.0 : 0.0;
-            //    popup.DisplayData(this.datasets.Train.getImage(i), labels[count], 
-            //        this.datasets.Train.getImage(i + 1), labels[count + 1],
-            //        res.ToString() );
-            //    popup.ShowDialog();
-
-            //    count++;
-
-            //}
 
             for (int i = 0; i < predictions.Length; i++)
             {
-                if (predictions[i] != 1) continue;
+                //if (predictions[i] != 1) continue;
                 //double res = (labels[i * 2] == labels[i * 2 + 1] ? 1.0 : 0.0);
                 popup.DisplayData(numbers[i], labels[i * 2], numbers2[i], labels[i * 2 + 1], predictions[i].ToString());
                 popup.ShowDialog();
@@ -148,37 +202,12 @@ namespace MNIST
 
         }
 
-        private void Train(Volume x, Volume y, int[] labels)
-        {
-            this._trainer.Train(x, y);
-
-            Test(x, labels, this._trainAccWindow, false);
-
-            this._stepCount += labels.Length;
-        }
-
-
-
-
-
-
+        // Helper Function.
         private List<Bitmap> VolumeToBitmap(Volume v, int width, int height)
         {
             List<Bitmap> bmps = new List<Bitmap>();
-
-            ////Copy image into Volume.
-            //var j = 0;
-            //for (var y = 0; y < h; y++)
-            //{
-            //    for (var x = 0; x < w; x++)
-            //    {
-            //        dataVolume.Set(x, y, 0, i, entry.Image[j] / 255.0);
-            //        dataVolume2.Set(x, y, 0, i, entry2.Image[j++] / 255.0);
-            //    }
-            //}
-
+            
             int batchSize = v.Shape.Dimensions[3];
-
             for (int n = 0; n < batchSize; n++)
             {
                 Bitmap bmp = new Bitmap(width, height);
@@ -194,7 +223,6 @@ namespace MNIST
             }
 
             return bmps;
-
         }
 
 

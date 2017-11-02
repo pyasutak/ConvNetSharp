@@ -35,33 +35,15 @@ namespace ConvNetSharp.SNet.Layers
 
         public override void Backward(Volume<double> outputGradient)
         {
-
             this.OutputActivationGradients = outputGradient;
-
-            //var rs = InputActivation.ReShape(1, 1, -1, InputActivation.Shape.GetDimension(3)).Storage; //Required???
-            //var rsB = InputTwinActivation.ReShape(1, 1, -1, InputTwinActivation.Shape.GetDimension(3)).Storage;
-            //SVolume join = new SVolume(rs, rsB);
-
             SVolume join = new SVolume(InputActivation.Storage, InputTwinActivation.Storage);
 
             join.DoNetworkJoinGradients(
                 this.Alpha, this.OutputActivationGradients,
                 this.InputActivationGradients, this.InputTwinActivationGradients, this.AlphaGradients);
-
-
-            //// compute gradient wrt weights and data
-            //using (var reshapedInput = this.InputActivation.ReShape(1, 1, -1, this.InputActivation.Shape.GetDimension(3)))
-            //using (var reshapedInputGradients = this.InputActivationGradients.ReShape(1, 1, -1, this.InputActivationGradients.Shape.GetDimension(3)))
-            //{
-            //    reshapedInput.ConvolveGradient(
-            //        this.Filters, this.OutputActivationGradients,
-            //        reshapedInputGradients, this.FiltersGradient,
-            //        0, 1);
-
-            //    this.OutputActivationGradients.BiasGradient(this.BiasGradient);
-            //}
         }
 
+        // Not Implemented. Use DoJoin()
         public override Volume<double> DoForward(Volume<double> input, bool isTraining = false)
         {
 #if DEBUG
@@ -71,8 +53,9 @@ namespace ConvNetSharp.SNet.Layers
                     throw new ArgumentException("Invalid input!");
 #endif
 
-
+            //!!!!!!!!!!!!!!!!!!!!!!!!
             //Need to split the input.
+            //!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
@@ -107,9 +90,8 @@ namespace ConvNetSharp.SNet.Layers
             throw new NotImplementedException();
             //return this.OutputActivation;
         }
-
-        //Should probably rename this method to distinguish between the Layer dofoward and the IJoinLayer doForward.
-        public virtual Volume<double> DoForward(bool isTraining = false, params Volume<double>[] inputs)
+        
+        public virtual Volume<double> DoJoin(bool isTraining = false, params Volume<double>[] inputs)
         {
 #if DEBUG
             foreach (var input in inputs)
@@ -166,21 +148,10 @@ namespace ConvNetSharp.SNet.Layers
 
         protected virtual Volume<double> Forward(Volume<double> input, Volume<double> inputB, bool isTraining = false)
         {
-
-            //var rs = input.ReShape(1, 1, -1, input.Shape.GetDimension(3)).Storage; //Is this necessary??? Mostly copying from FullyConnLayer
-            //var rsB = inputB.ReShape(1, 1, -1, input.Shape.GetDimension(3)).Storage;
-            //SVolume join = new SVolume(rs, rsB);
-
-            //Let's try this...
             SVolume join = new SVolume(input.Storage, inputB.Storage);
 
             join.DoNetworkJoin(this.Alpha, this.OutputActivation);
             return this.OutputActivation;
-
-
-            //reshapedInput.DoConvolution(this.Filters, 0, 1, this.OutputActivation);
-            //this.OutputActivation.DoAdd(this.Bias, this.OutputActivation);
-            //return this.OutputActivation;
         }
 
         public override List<ParametersAndGradients<double>> GetParametersAndGradients()
