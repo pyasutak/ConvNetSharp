@@ -20,8 +20,10 @@ namespace ATTFace
             this._trainImages = trainImages;
         }
 
-        public Tuple<Volume, Volume, int[]> NextBatch(int batchSize)
+        public Tuple<Volume, Volume, int[]> NextBatch(int batchSize, out bool epochComplete)
         {
+            epochComplete = false;
+
             const int w = 92;
             const int h = 112;
 
@@ -30,9 +32,11 @@ namespace ATTFace
             var data = new double[dataShape.TotalLength];
             var expected = new double[expectedShape.TotalLength];
             var labels = new int[batchSize * 2];
-            
+
+            // Shuffle for every epoch
+            if (this._start == 0)
             // Shuffle for the first epoch
-            if (this._start == 0 && this._epochCompleted == 0)
+            //if (this._start == 0 && this._epochCompleted == 0)
             {
                 for (var i = this._trainImages.Count - 1; i >= 0; i--)
                 {
@@ -75,12 +79,23 @@ namespace ATTFace
 
             for (var i = 0; i < batchSize; i++)
             {
-                if (this._start >= this._trainImages.Count)
-                {
-                    this._start = 0;
-                    this._epochCompleted++;
-                    Console.WriteLine($"Epoch #{this._epochCompleted}");
-                }
+                //if (this._start >= this._trainImages.Count)
+                //{
+                //    this._start = 0;
+                //    this._epochCompleted++;
+                //    epochComplete = true;
+                //    //Console.WriteLine($"Epoch #{this._epochCompleted}");
+
+                //    expectedShape.Dimensions[3] = i; //i is already incremented.
+                //    dataShape.Dimensions[3] = i;
+                //    dataVolume.ReShape(dataShape);
+                //    dataVolume2.ReShape(dataShape);
+
+                //    var expectedVolumeTrunc = new Volume(expected, expectedShape);
+                //    var joinedDataTrunc = SNet<double>.JoinVolumes(dataVolume, dataVolume2) as ConvNetSharp.Volume.Double.Volume;
+
+                //    return new Tuple<Volume, Volume, int[]>(joinedDataTrunc, expectedVolumeTrunc, labels);
+                //}
                 
                 ATTEntry entry = this._trainImages[this._start++];
                 ATTEntry entry2 = this._trainImages[this._start++];
@@ -107,6 +122,23 @@ namespace ATTFace
                 expected[i] = compare;
 
                 //expected output is dim: [1, 1, 1, batchSize]. Either 0.0(no match), or 1.0 (match)
+                if (this._start >= this._trainImages.Count)
+                {
+                    this._start = 0;
+                    this._epochCompleted++;
+                    epochComplete = true;
+                    //Console.WriteLine($"Epoch #{this._epochCompleted}");
+
+                    //expectedShape.Dimensions[3] = i; //i is already incremented.
+                    //dataShape.Dimensions[3] = i;
+                    //dataVolume.ReShape(dataShape);
+                    //dataVolume2.ReShape(dataShape);
+
+                    //var expectedVolumeTrunc = new Volume(expected, expectedShape);
+                    //var joinedDataTrunc = SNet<double>.JoinVolumes(dataVolume, dataVolume2) as ConvNetSharp.Volume.Double.Volume;
+
+                    //return new Tuple<Volume, Volume, int[]>(joinedDataTrunc, expectedVolumeTrunc, labels);
+                }
             }
             
             var expectedVolume = new Volume(expected, expectedShape);
