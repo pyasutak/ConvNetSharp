@@ -74,10 +74,9 @@ namespace ConvNetSharp.SNet
             var lastDistanceLayer = this.DistanceLayers[dn - 1] as ILastLayer<T>;
             if (lastLayer != null && lastLayerTwin != null)
             {
-                T loss;
 
                 // Calculate Gradients for Distance Layer
-                lastDistanceLayer.Backward(y, out loss);
+                lastDistanceLayer.Backward(y, out T loss);
                 for (int i = dn - 2; i >= 0; i--)
                 {
                     this.DistanceLayers[i].Backward(this.DistanceLayers[i + 1].InputActivationGradients);
@@ -237,6 +236,7 @@ namespace ConvNetSharp.SNet
                 //gradient.DoMultiply(gradient, Ops<T>.Cast(0.5)); //Additive instead of average
                 gradientT.DoAdd(temp, gradientT);
                 //gradientT.DoMultiply(gradientT, Ops<T>.Cast(0.5));
+                temp.Dispose();
             }
         }
 
@@ -290,8 +290,7 @@ namespace ConvNetSharp.SNet
                 throw new ArgumentException("First layer should be an InputLayer");
             }
 
-            var classificationLayer = layer as IClassificationLayer;
-            if (classificationLayer != null)
+            if (layer is IClassificationLayer classificationLayer)
             {
                 var fullconLayer = lastLayer as FullyConnLayer<T>;
                 if (fullconLayer == null)
@@ -307,11 +306,9 @@ namespace ConvNetSharp.SNet
                 }
             }
 
-            var reluLayer = layer as ReluLayer<T>;
-            if (reluLayer != null)
+            if (layer is ReluLayer<T> reluLayer)
             {
-                var dotProductLayer = lastLayer as IDotProductLayer<T>;
-                if (dotProductLayer != null)
+                if (lastLayer is IDotProductLayer<T> dotProductLayer)
                 {
                     // relus like a bit of positive bias to get gradients early
                     // otherwise it's technically possible that a relu unit will never turn on (by chance)
@@ -399,13 +396,16 @@ namespace ConvNetSharp.SNet
         //Used for testing? Copied direct from Core.Net
         public T GetCostLoss(Volume<T> input, Volume<T> y)
         {
-            Forward(input);
 
-            var lastLayer = this.Layers[this.Layers.Count - 1] as ILastLayer<T>;
-            if (lastLayer != null)
+            SplitVolumes(input, out Volume<T> split1, out Volume<T> split2);
+            if (!split1.Equals(this.Layers[0].InputActivation) || !split2.Equals(this.LayersTwin[0].InputActivation) )
             {
-                T loss;
-                lastLayer.Backward(y, out loss);
+                Forward(split1,split2);
+            }
+
+            if (this.DistanceLayers[this.DistanceLayers.Count - 1] is ILastLayer<T> lastLayer)
+            {
+                lastLayer.Backward(y, out T loss);
                 return loss;
             }
 
@@ -416,27 +416,31 @@ namespace ConvNetSharp.SNet
         public int[] GetPrediction()
         {
             //Returns forward output for accuracy measurement.
-            var lastLayer = DistanceLayers[DistanceLayers.Count - 1];
-            var output = lastLayer.OutputActivation.ToArray();
+            //var lastLayer = DistanceLayers[DistanceLayers.Count - 1];
+            //var output = lastLayer.OutputActivation.ToArray();
+            var output = DistanceLayers[DistanceLayers.Count - 1].OutputActivation.ToArray();
             int[] predictions = new int[output.Length];
 
-            T matchTarget = Ops<T>.Zero;
-            T matchThreshold = Ops<T>.Zero;
+            //T matchTarget = Ops<T>.Zero;
+            //T matchThreshold = Ops<T>.Zero;
 
-            //Matching parameters depend on final output.
-            var sigmoid = lastLayer as SigmoidLayer<T>;
-            if (sigmoid != null)
-            {
-                matchTarget = Ops<T>.Cast(1.0);
-                matchThreshold = Ops<T>.Cast(0.2);
-            }
+            T matchTarget = Ops<T>.Cast(1.0);
+            T matchThreshold = Ops<T>.Cast(0.2);
 
-            var joinlayer = lastLayer as IJoinLayer;
-            if (joinlayer != null)
-            {
-                matchTarget = Ops<T>.Zero;
-                matchThreshold = Ops<T>.Cast(0.5);
-            }
+            ////Matching parameters depend on final output.
+            //var sigmoid = lastLayer as SigmoidLayer<T>;
+            //if (sigmoid != null)
+            //{
+            //    matchTarget = Ops<T>.Cast(1.0);
+            //    matchThreshold = Ops<T>.Cast(0.2);
+            //}
+
+            //var joinlayer = lastLayer as IJoinLayer;
+            //if (joinlayer != null)
+            //{
+            //    matchTarget = Ops<T>.Zero;
+            //    matchThreshold = Ops<T>.Cast(0.5);
+            //}
 
             for (int i = 0; i < predictions.Length; i++)
             {
