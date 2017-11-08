@@ -38,10 +38,10 @@ namespace ATTFace
             // Create network
             this._snet = new SNet<double>();
             this._snet.AddLayer(new InputLayer(92, 112, 1));                        //input shape:
-            this._snet.AddLayer(new ConvLayer(7, 7, 32) { Stride = 1});             //92 x 112 x  1 x 20
+            this._snet.AddLayer(new ConvLayer(7, 7, 32) { Stride = 1 });             //92 x 112 x  1 x 20
             this._snet.AddLayer(new ReluLayer());                                   //92 x 112 x  8 x 20
             this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //92 x 112 x  8 x 20
-            this._snet.AddLayer(new ConvLayer(4, 4, 32) { Stride = 1 });             //46 x  56 x  8 x 20
+            this._snet.AddLayer(new ConvLayer(5, 5, 32) { Stride = 1});             //46 x  56 x  8 x 20
             this._snet.AddLayer(new ReluLayer());                                   //46 x  56 x 16 x 20
             this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //46 x  56 x 16 x 20
             this._snet.AddLayer(new FullyConnLayer(1000));                           //23 x  28 x 16 x 20
@@ -63,10 +63,11 @@ namespace ATTFace
             {
                 // Do learning
                 Console.WriteLine("Convolutional neural network learning...");
-                bool epoch;
+                bool epoch = false;
                 do
                 {
-                    var trainSample = datasets.Train.NextBatch(this._trainer.BatchSize, out epoch);
+                    var trainSample = datasets.Train.NextBatch(this._trainer.BatchSize);
+                    epoch = datasets.Train.EpochCompleted;
                     Train(trainSample.Item1, trainSample.Item2, trainSample.Item3);
 
                     //var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
@@ -90,7 +91,7 @@ namespace ATTFace
                 // Run on accWindow / batchSize batches.
                 //for (int i = 0; i < 5; i++)
                 //{
-                var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize, out bool epochThrowaway);
+                var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
                 Test(testsample.Item1, testsample.Item3, this._validAccWindow);
                 //}
 
@@ -108,36 +109,34 @@ namespace ATTFace
                 {
                     double avg = this._lossWindow.Items.Average();
                     double threshold = avg * 0.05;
-                    if (Math.Sqrt(Math.Pow((avg - this._trainer.Loss), 2.0)) < threshold) //Euclidean Distance
+                    Console.WriteLine("Testing for Convergence... {0} - {1}", avg, validationLoss);
+                    if (Math.Sqrt(Math.Pow((avg - validationLoss), 2.0)) < threshold) //Euclidean Distance
                     {
+                        Console.WriteLine("Convergence reached on epoch {0}, with average loss: {1}", this.datasets.Train.Epoch, avg);
                         break;
                     }
                 }
                 this._lossWindow.Add(validationLoss);
 
                 if (this.datasets.Train.Epoch >= 200)
+                {
+                    Console.WriteLine("Training Schedule has reached its end. No further Learning");
                     break;
+                }
             }
             Console.WriteLine("Training is Done.");
-            
+
             // Test whole Validation set.
-            Console.WriteLine("Run on Validation Set...[Press any key to test net]");
+            Console.WriteLine("Further Validation...[Press Key to Exit]");
             do
             {
-                var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize, out bool epochThrowaway);
+                var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
                 Test(testsample.Item1, testsample.Item3, this._validAccWindow);
 
-                //var testsample = datasets.Validation.NextBatch(this._trainer.BatchSize);
-                //Test(testsample.Item1, testsample.Item3, this._validAccWindow);
+                var validationLoss = this._snet.GetCostLoss(testsample.Item1, testsample.Item2);
 
-                //this._lossWindow.Add(this._trainer.Loss);
-
-                Console.WriteLine("Loss: {0} Train accuracy: {1}%", this._trainer.Loss,
+                Console.WriteLine("Loss: {0} Train accuracy: {1}%", validationLoss,
                     Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
-
-                Console.WriteLine("Fwd: {0}ms Bckw: {1}ms",
-                    Math.Round(this._trainer.ForwardTimeMs, 2),
-                    Math.Round(this._trainer.BackwardTimeMs, 2));
             } while (!Console.KeyAvailable);
         }
 
