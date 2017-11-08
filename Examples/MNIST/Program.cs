@@ -12,9 +12,9 @@ namespace ATTFace
 {
     internal class Program
     {
-        private readonly CircularBuffer<double> _validAccWindow = new CircularBuffer<double>(100);
+        private readonly CircularBuffer<double> _validAccWindow = new CircularBuffer<double>(20);
         private readonly CircularBuffer<double> _trainAccWindow = new CircularBuffer<double>(100);
-        private readonly CircularBuffer<double> _lossWindow = new CircularBuffer<double>(100); //Unused.
+        private readonly CircularBuffer<double> _lossWindow = new CircularBuffer<double>(5);
         private SNet<double> _snet;
         private int _stepCount;
         private SgdTrainer<double> _trainer;
@@ -41,10 +41,10 @@ namespace ATTFace
             this._snet.AddLayer(new ConvLayer(7, 7, 32) { Stride = 1 });             //92 x 112 x  1 x 20
             this._snet.AddLayer(new ReluLayer());                                   //92 x 112 x  8 x 20
             this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //92 x 112 x  8 x 20
-            this._snet.AddLayer(new ConvLayer(4, 4, 32) { Stride = 1 });            //46 x  56 x  8 x 20
+            this._snet.AddLayer(new ConvLayer(5, 5, 32) { Stride = 1});             //46 x  56 x  8 x 20
             this._snet.AddLayer(new ReluLayer());                                   //46 x  56 x 16 x 20
             this._snet.AddLayer(new PoolLayer(2, 2) { Stride = 2 });                //46 x  56 x 16 x 20
-            this._snet.AddLayer(new FullyConnLayer(100));                           //23 x  28 x 16 x 20
+            this._snet.AddLayer(new FullyConnLayer(1000));                           //23 x  28 x 16 x 20
             this._snet.AddLayer(new SigmoidLayer());
 
             this._snet.AddDistanceLayer(new TwinJoinLayer());
@@ -139,7 +139,6 @@ namespace ATTFace
                     Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
             } while (!Console.KeyAvailable);
         }
-
 
         private void Train(Volume x, Volume y, int[] labels)
         {
