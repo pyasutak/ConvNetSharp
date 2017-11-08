@@ -11,9 +11,11 @@ namespace ATTFace
         private readonly List<ATTEntry> _trainImages;
         private readonly Random _random = new Random(RandomUtilities.Seed);
         private int _start;
-        private int _epochCompleted;
+        private int _epochsCompleted;
 
-        public int Epoch { get { return _epochCompleted; } }
+        public int Epoch { get { return _epochsCompleted; } }
+
+        public bool EpochCompleted { get; private set; }
 
         public DataSet(List<ATTEntry> trainImages)
         {
@@ -30,9 +32,11 @@ namespace ATTFace
             var data = new double[dataShape.TotalLength];
             var expected = new double[expectedShape.TotalLength];
             var labels = new int[batchSize * 2];
-            
+
+            EpochCompleted = false;
+
             // Shuffle for the first epoch
-            if (this._start == 0 && this._epochCompleted == 0)
+            if (this._start == 0 && this._epochsCompleted == 0)
             {
                 for (var i = this._trainImages.Count - 1; i >= 0; i--)
                 {
@@ -75,12 +79,6 @@ namespace ATTFace
 
             for (var i = 0; i < batchSize; i++)
             {
-                if (this._start >= this._trainImages.Count)
-                {
-                    this._start = 0;
-                    this._epochCompleted++;
-                    Console.WriteLine($"Epoch #{this._epochCompleted}");
-                }
                 
                 ATTEntry entry = this._trainImages[this._start++];
                 ATTEntry entry2 = this._trainImages[this._start++];
@@ -107,6 +105,15 @@ namespace ATTFace
                 expected[i] = compare;
 
                 //expected output is dim: [1, 1, 1, batchSize]. Either 0.0(no match), or 1.0 (match)
+
+
+                if (this._start >= this._trainImages.Count)
+                {
+                    this._start = 0;
+                    this._epochsCompleted++;
+                    EpochCompleted = true;
+                    Console.WriteLine($"Epoch #{this._epochsCompleted}");
+                }
             }
             
             var expectedVolume = new Volume(expected, expectedShape);

@@ -399,9 +399,12 @@ namespace ConvNetSharp.SNet
         //Used for testing? Copied direct from Core.Net
         public T GetCostLoss(Volume<T> input, Volume<T> y)
         {
-            Forward(input);
 
-            var lastLayer = this.Layers[this.Layers.Count - 1] as ILastLayer<T>;
+            SplitVolumes(input, out Volume<T> split1, out Volume<T> split2);
+            if (!split1.Equals(this.Layers[0].InputActivation) || !split2.Equals(this.LayersTwin[0].InputActivation))
+                Forward(split1,split2);
+
+            var lastLayer = this.DistanceLayers[this.DistanceLayers.Count - 1] as ILastLayer<T>;
             if (lastLayer != null)
             {
                 T loss;
