@@ -193,6 +193,23 @@ namespace ATTFace
 
         }
 
+
+        private void ShowValidation(Volume images, int[] labels)
+        {
+            SNet<double>.SplitVolumes(images, out ConvNetSharp.Volume.Volume<double> v1, out ConvNetSharp.Volume.Volume<double> v2);
+
+            var faces = VolumeToBitmap(v1 as Volume, 92, 112);
+            var faces2 = VolumeToBitmap(v2 as Volume, 92, 112);
+
+            var popup = new DisplayVerification();
+
+            popup.ShowData(faces, faces2, labels);
+
+            popup.ShowDialog();
+        }
+
+
+
         // Helper Function.
         private List<Bitmap> VolumeToBitmap(Volume v, int width, int height)
         {
