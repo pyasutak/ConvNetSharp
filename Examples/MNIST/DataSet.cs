@@ -112,7 +112,7 @@ namespace ATTFace
                     this._start = 0;
                     this._epochsCompleted++;
                     EpochCompleted = true;
-                    Console.WriteLine($"Epoch #{this._epochsCompleted}");
+                    //Console.WriteLine($"Epoch #{this._epochsCompleted}");
                 }
             }
             
