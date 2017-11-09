@@ -59,10 +59,7 @@ namespace ConvNetSharp.Core.Training
             {
                 foreach (var parameter in parametersAndGradients)
                 {
-                    if (isMomentumGreaterThanZero)
-                    { 
-                        this.velocities.Add(BuilderInstance<T>.Volume.SameAs(parameter.Volume.Shape));
-                    }
+                    this.velocities.Add(BuilderInstance<T>.Volume.SameAs(parameter.Volume.Shape));
                     this.deltas.Add(BuilderInstance<T>.Volume.SameAs(parameter.Volume.Shape));
                     this.regGrads.Add(BuilderInstance<T>.Volume.SameAs(parameter.Volume.Shape));
                 }
@@ -76,11 +73,8 @@ namespace ConvNetSharp.Core.Training
                 var gradients = parametersAndGradient.Gradient;
                 var delta = this.deltas[i];
                 var regularizationGradients = this.regGrads[i];
-                Volume<T> velocity = null;
-                if (isMomentumGreaterThanZero)
-                {
-                    velocity = this.velocities[i];
-                }
+                var velocity = this.velocities[i];
+
                 // learning rate for some parameters.
                 var l2DecayMul = parametersAndGradient.L2DecayMul ?? Ops<T>.One;
                 var l1DecayMul = parametersAndGradient.L1DecayMul ?? Ops<T>.One;
