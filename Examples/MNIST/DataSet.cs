@@ -20,6 +20,7 @@ namespace ATTFace
         public DataSet(List<ATTEntry> trainImages)
         {
             this._trainImages = trainImages;
+            this.EpochCompleted = true;
         }
 
         public Tuple<Volume, Volume, int[]> NextBatch(int batchSize)
@@ -32,11 +33,11 @@ namespace ATTFace
             var data = new double[dataShape.TotalLength];
             var expected = new double[expectedShape.TotalLength];
             var labels = new int[batchSize * 2];
-
-            EpochCompleted = false;
-
-            // Shuffle for the first epoch
-            if (this._start == 0 && this._epochsCompleted == 0)
+            
+            //// Shuffle for the first epoch
+            //if (this._start == 0 && this._epochsCompleted == 0)
+            // Shuffle every epoch
+            if (EpochCompleted)
             {
                 for (var i = this._trainImages.Count - 1; i >= 0; i--)
                 {
@@ -74,6 +75,8 @@ namespace ATTFace
                 }
             }
             
+            EpochCompleted = false;
+
             var dataVolume = new Volume(data, dataShape);
             var dataVolume2 = new Volume(data, dataShape);
 
