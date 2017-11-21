@@ -137,6 +137,8 @@ namespace ATTFace
 
                 Console.WriteLine("Loss: {0} Train accuracy: {1}%", validationLoss,
                     Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
+
+                ShowValidation(testsample.Item1, testsample.Item3);
             } while (!Console.KeyAvailable);
         }
 
@@ -201,9 +203,11 @@ namespace ATTFace
             var faces = VolumeToBitmap(v1 as Volume, 92, 112);
             var faces2 = VolumeToBitmap(v2 as Volume, 92, 112);
 
+            var predictions = this._snet.GetPrediction();
+            
             var popup = new DisplayVerification();
 
-            popup.ShowData(faces, faces2, labels);
+            popup.ShowData(faces, faces2, labels, predictions);
 
             popup.ShowDialog();
         }
