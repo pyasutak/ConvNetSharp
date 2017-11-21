@@ -108,7 +108,7 @@ namespace ATTFace
                 if (this._lossWindow.Count == this._lossWindow.Capacity)
                 {
                     double avg = this._lossWindow.Items.Average();
-                    double threshold = avg * 0.05;
+                    double threshold = avg * 0.01;
                     Console.WriteLine("Testing for Convergence... {0} - {1}", avg, validationLoss);
                     if (Math.Sqrt(Math.Pow((avg - validationLoss), 2.0)) < threshold) //Euclidean Distance
                     {
@@ -136,7 +136,7 @@ namespace ATTFace
                 var validationLoss = this._snet.GetCostLoss(testsample.Item1, testsample.Item2);
 
                 Console.WriteLine("Loss: {0} Train accuracy: {1}%", validationLoss,
-                    Math.Round(this._trainAccWindow.Items.Average() * 100.0, 2));
+                    Math.Round(this._validAccWindow.Items.Average() * 100.0, 2));
 
                 ShowValidation(testsample.Item1, testsample.Item3);
             } while (!Console.KeyAvailable);
@@ -204,7 +204,7 @@ namespace ATTFace
             var faces2 = VolumeToBitmap(v2 as Volume, 92, 112);
 
             var predictions = this._snet.GetPrediction();
-            
+
             var popup = new DisplayVerification();
 
             popup.ShowData(faces, faces2, labels, predictions);

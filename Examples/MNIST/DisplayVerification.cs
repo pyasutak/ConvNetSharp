@@ -99,7 +99,7 @@ namespace ATTFace
             this.label15.Text = s;
             //Pair 16
             this.face31.Image = faces[16 - 1];
-            this.face32.Image = facesTwin[1+ - 1];
+            this.face32.Image = facesTwin[1 + -1];
             s = "#: " + labels[31 - 1] + " and #: " + labels[32 - 1] + "\tout: " + (predictions[16 - 1] == 1 ? "MATCH" : "NO MATCH");
             this.label16.Text = s;
             //Pair 17
